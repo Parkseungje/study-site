@@ -5,11 +5,27 @@
 
 ```
 content/
-├─ _tracks.yml              트랙 정의
+├─ _tracks.yml              트랙 정의 (최상위 분류)
+├─ _subjects.yml            과목 정의 (트랙 아래, 기술 하나)
 ├─ _prompts.yml             AI 프롬프트 템플릿
 └─ <chapterId>/
    ├─ _chapter.yml          장 정의
    └─ <conceptId>.md        개념 하나
+```
+
+계층은 **트랙 → 과목 → 장 → 개념**이다.
+과목은 건너뛸 수 있다. 그러면 장이 트랙 바로 아래에 놓인다.
+
+```
+인프라 (트랙)
+└─ Docker (과목)              → /s/docker 페이지가 생긴다
+   ├─ PART 1 (장)
+   │  ├─ why-containers       → /c/why-containers
+   │  └─ ...
+   └─ PART 2 (장)
+
+백엔드 (트랙)
+└─ PART 1 (장)                과목 없이 트랙 바로 아래
 ```
 
 ## 이 커리큘럼의 척추: 고통 → 해결
@@ -37,15 +53,38 @@ content/
   ord: 1
 ```
 
+## _subjects.yml
+
+트랙 아래의 과목. 기술 하나에 해당한다. 과목마다 `/s/<id>` 페이지가 생기고,
+홈에서는 그 과목이 링크 카드 하나로 접혀 보인다.
+
+```yaml
+- id: docker
+  trackId: infra
+  title: Docker
+  summary: 배포의 고통에서 출발해 컨테이너가 무엇인지, 왜 그렇게 생겼는지까지
+  ord: 1
+```
+
+기술을 하나 새로 시작할 때 여기에 한 줄 추가하고, 장들에 `subjectId` 를 적는다.
+
 ## _chapter.yml
 
 ```yaml
-id: oop
-trackId: backend
-title: PART 1 · 객체지향 기초
-summary: 왜 자바는 객체지향인가에 직접 답하고, OOP 의 뼈대를 손에 익힌다
+id: docker-intro
+subjectId: docker          # 또는 trackId. 둘 중 하나만
+title: PART 1 · 배포의 고통과 격리의 역사
+summary: 컨테이너가 왜 필요한가에 직접 답하고, VM 과의 차이를 커널 수준에서 구분한다
 ord: 1
 ```
+
+`subjectId` 와 `trackId` 는 **정확히 하나만** 적는다.
+
+- `subjectId` 를 적으면 트랙은 그 과목에서 물려받는다. 두 곳에 같은 사실을 적지 않는다
+- `trackId` 를 적으면 과목 없이 트랙 바로 아래에 놓인다
+- 둘 다 적거나 둘 다 없으면 오류로 멈춘다
+
+`ord` 는 **과목 안에서의 순서**다. 과목이 다르면 1 부터 다시 시작해도 된다.
 
 폴더명과 `id` 는 같아야 한다. 다르면 오류로 멈춘다.
 
@@ -204,6 +243,30 @@ outcomes:
 
 네 종류로 안 되는 것. 컴포넌트를 직접 써야 한다. **예외로만 쓴다.**
 
+### YAML 함정 두 가지
+
+`visual` 블록 안과 frontmatter 는 YAML 이다. 아래 두 경우가 자주 빌드를 세운다.
+
+**1. 값을 따옴표로 시작하면 안 된다.** YAML 이 인용 스칼라로 읽고 뒤를 버린다.
+
+```yaml
+detail: "Docker 지원 중단" 이라는 말이...     # ✗ 파싱 실패
+detail: 지원 중단이라는 말이...                # ✓
+summary: "Java 17" 은 맞지만...               # ✗
+summary: 적힌 대로 Java 17 은 맞지만...        # ✓
+```
+
+**2. 값 안에 `콜론+공백` 이 있으면 안 된다.** 중첩 매핑으로 읽힌다.
+
+```yaml
+code: config: sha256:7a6b... / layers: [...]   # ✗ 파싱 실패
+code: config → sha256:7a6b... · layers → [...] # ✓
+code: GET /v2/<name>/manifests/<ref>           # ✓ 콜론 뒤에 공백이 없으면 괜찮다
+```
+
+둘 다 **따옴표로 전체를 감싸도** 해결되지만, 한글 문장에 따옴표를 두르면
+본문 톤과 어긋난다. `→` `·` `—` 같은 기호로 바꿔 쓰는 쪽이 낫다.
+
 ## 코드 블록 메타
 
 코드 펜스의 언어 뒤에 메타를 이어 붙인다.
@@ -241,7 +304,10 @@ outcomes:
 | 오류 | 필수 필드 누락 (`title`, `summary`, `ord`, `minutes`) |
 | 오류 | 본문이 비어 있음 |
 | 오류 | 폴더명과 `_chapter.yml` 의 `id` 불일치 |
+| 오류 | `_chapter.yml` 에 `trackId` 와 `subjectId` 가 둘 다 있거나 둘 다 없음 |
 | 오류 | `_chapter.yml` 의 `trackId` 가 `_tracks.yml` 에 없음 |
+| 오류 | `_chapter.yml` 의 `subjectId` 가 `_subjects.yml` 에 없음 |
+| 오류 | `_subjects.yml` 의 `trackId` 가 `_tracks.yml` 에 없음 |
 | 오류 | 개념 id 중복, visual id 중복 |
 | 오류 | 제목이 같은 `##` 절이 둘 |
 | 오류 | `prerequisite` 순환 |

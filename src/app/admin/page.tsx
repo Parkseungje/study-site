@@ -69,6 +69,11 @@ export default async function AdminPage() {
           {track.chapters.map((chapter) => (
             <div key={chapter.id} className="mt-6">
               <div className="flex items-baseline gap-3">
+                {chapter.subjectTitle && (
+                  <span className="shrink-0 rounded bg-neutral-100 px-1.5 py-0.5 text-xs text-neutral-600 dark:bg-neutral-800 dark:text-neutral-400">
+                    {chapter.subjectTitle}
+                  </span>
+                )}
                 <h3 className="font-medium">{chapter.title}</h3>
                 <code className="font-mono text-xs text-neutral-400">{chapter.id}</code>
                 <Link

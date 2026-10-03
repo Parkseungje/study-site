@@ -87,6 +87,10 @@ export default function PromptPage() {
             <dd className="font-mono text-xs leading-6">{ctx.trackIds}</dd>
           </div>
           <div className="flex gap-3">
+            <dt className="w-16 shrink-0 text-neutral-500">과목</dt>
+            <dd className="font-mono text-xs leading-6">{ctx.subjectIds}</dd>
+          </div>
+          <div className="flex gap-3">
             <dt className="w-16 shrink-0 text-neutral-500">장</dt>
             <dd className="font-mono text-xs leading-6">{ctx.chapterIds}</dd>
           </div>

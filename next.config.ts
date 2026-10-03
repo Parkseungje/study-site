@@ -6,6 +6,7 @@ const nextConfig: NextConfig = {
   // 이게 없으면 배포본에서 개념 페이지가 ENOENT 로 죽는다.
   outputFileTracingIncludes: {
     "/c/[id]": ["./content/**/*"],
+    "/s/[id]": ["./content/**/*"],
     "/missing/[id]": ["./content/**/*"],
     "/prompt": ["./content/**/*", "./docs/*_curriculum.md"],
     "/prompt/kit.md": ["./content/**/*", "./docs/*_curriculum.md"],

@@ -73,6 +73,17 @@ export default async function ConceptPage({ params }: Props) {
           <Link href="/" className="hover:underline">
             {concept.chapter.track.title}
           </Link>
+          {concept.chapter.subject && (
+            <>
+              <span className="mx-1.5">›</span>
+              <Link
+                href={`/s/${concept.chapter.subject.id}`}
+                className="hover:underline"
+              >
+                {concept.chapter.subject.title}
+              </Link>
+            </>
+          )}
           <span className="mx-1.5">›</span>
           <span>{concept.chapter.title}</span>
         </nav>

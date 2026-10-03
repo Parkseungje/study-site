@@ -23,9 +23,20 @@ export const EDGE_TYPES = ["prerequisite", "deepens", "related"] as const;
 export type EdgeType = (typeof EDGE_TYPES)[number];
 
 export type Track = { id: string; title: string; ord: number };
-export type Chapter = {
+/** 트랙 아래의 과목. 기술 하나에 해당한다. */
+export type Subject = {
   id: string;
   trackId: string;
+  title: string;
+  summary: string;
+  ord: number;
+};
+export type Chapter = {
+  id: string;
+  /** 과목에 속하면 그 과목의 트랙. 파서가 채운다. */
+  trackId: string;
+  /** 과목에 안 속하면 null. 그러면 트랙 바로 아래에 놓인다. */
+  subjectId: string | null;
   title: string;
   summary: string;
   ord: number;
@@ -67,6 +78,7 @@ export type Problem = { level: "error" | "warn"; where: string; message: string 
 
 export type ParsedContent = {
   tracks: Track[];
+  subjects: Subject[];
   chapters: Chapter[];
   concepts: Concept[];
   prompts: PromptTemplate[];
@@ -371,6 +383,22 @@ export function parseContent(root: string): ParsedContent {
   const tracks = readYaml<Track[]>(join(root, "_tracks.yml")) ?? [];
   const trackIds = new Set(tracks.map((t) => t.id));
 
+  const subjects =
+    (existsSync(join(root, "_subjects.yml"))
+      ? readYaml<Subject[]>(join(root, "_subjects.yml"))
+      : []) ?? [];
+  const subjectById = new Map(subjects.map((s) => [s.id, s]));
+
+  for (const s of subjects) {
+    if (!trackIds.has(s.trackId)) {
+      problems.push({
+        level: "error",
+        where: `_subjects.yml (${s.id})`,
+        message: `_tracks.yml 에 없는 trackId: ${s.trackId}`,
+      });
+    }
+  }
+
   const promptsRaw =
     (existsSync(join(root, "_prompts.yml"))
       ? readYaml<PromptTemplate[]>(join(root, "_prompts.yml"))
@@ -390,24 +418,68 @@ export function parseContent(root: string): ParsedContent {
       continue;
     }
 
-    const chapter = readYaml<Chapter>(chapterPath);
-    if (chapter.id !== dir) {
+    const raw = readYaml<
+      Omit<Chapter, "trackId" | "subjectId"> & {
+        trackId?: string;
+        subjectId?: string;
+      }
+    >(chapterPath);
+    const where = `${dir}/_chapter.yml`;
+
+    if (raw.id !== dir) {
       problems.push({
         level: "error",
-        where: `${dir}/_chapter.yml`,
-        message: `폴더명과 id 가 다릅니다: ${chapter.id}`,
+        where,
+        message: `폴더명과 id 가 다릅니다: ${raw.id}`,
       });
       continue;
     }
-    if (!trackIds.has(chapter.trackId)) {
+
+    // 둘 다 적으면 어느 쪽이 맞는지 알 수 없고, 둘 다 없으면 놓을 자리가 없다.
+    if (!!raw.trackId === !!raw.subjectId) {
       problems.push({
         level: "error",
-        where: `${dir}/_chapter.yml`,
-        message: `_tracks.yml 에 없는 trackId: ${chapter.trackId}`,
+        where,
+        message: raw.trackId
+          ? "trackId 와 subjectId 를 동시에 적을 수 없습니다. 하나만 두세요"
+          : "trackId 또는 subjectId 가 있어야 합니다",
       });
       continue;
     }
-    chapters.push(chapter);
+
+    let trackId: string;
+    if (raw.subjectId) {
+      const subject = subjectById.get(raw.subjectId);
+      if (!subject) {
+        problems.push({
+          level: "error",
+          where,
+          message: `_subjects.yml 에 없는 subjectId: ${raw.subjectId}`,
+        });
+        continue;
+      }
+      // 과목의 트랙을 물려받는다. 그래서 두 곳에 같은 사실을 적지 않는다.
+      trackId = subject.trackId;
+    } else {
+      trackId = raw.trackId!;
+      if (!trackIds.has(trackId)) {
+        problems.push({
+          level: "error",
+          where,
+          message: `_tracks.yml 에 없는 trackId: ${trackId}`,
+        });
+        continue;
+      }
+    }
+
+    chapters.push({
+      id: raw.id,
+      trackId,
+      subjectId: raw.subjectId ?? null,
+      title: raw.title,
+      summary: raw.summary,
+      ord: raw.ord,
+    });
 
     for (const file of readdirSync(join(root, dir))) {
       if (!file.endsWith(".md")) continue;
@@ -480,5 +552,5 @@ export function parseContent(root: string): ParsedContent {
     return true;
   });
 
-  return { tracks, chapters, concepts, prompts, problems };
+  return { tracks, subjects, chapters, concepts, prompts, problems };
 }

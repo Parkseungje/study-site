@@ -2,7 +2,13 @@ import "server-only";
 import { load } from "js-yaml";
 import matter from "gray-matter";
 import { listContentFiles, readFile, type GhFile } from "@/lib/github";
-import { parseConceptSource, type Problem, type Track, type Chapter } from "@/lib/content";
+import {
+  parseConceptSource,
+  type Problem,
+  type Track,
+  type Subject,
+  type Chapter,
+} from "@/lib/content";
 
 export type AdminConcept = {
   id: string;
@@ -14,7 +20,12 @@ export type AdminConcept = {
   summary: string;
 };
 
-export type AdminChapter = Chapter & { path: string; concepts: AdminConcept[] };
+export type AdminChapter = Chapter & {
+  path: string;
+  concepts: AdminConcept[];
+  /** 어느 과목 아래인지. 트랙 바로 아래면 null */
+  subjectTitle: string | null;
+};
 export type AdminTrack = Track & { chapters: AdminChapter[] };
 
 export type AdminTree = {
@@ -33,13 +44,35 @@ export async function loadAdminTree(): Promise<AdminTree> {
     ? ((load((await readFile(tracksFile.path))?.text ?? "") as Track[]) ?? [])
     : [];
 
+  const subjectsFile = files.find((f) => f.path === "content/_subjects.yml");
+  const subjects: Subject[] = subjectsFile
+    ? ((load((await readFile(subjectsFile.path))?.text ?? "") as Subject[]) ?? [])
+    : [];
+  const subjectById = new Map(subjects.map((s) => [s.id, s]));
+
   const chapterFiles = files.filter((f) => /^content\/[^/]+\/_chapter\.yml$/.test(f.path));
-  const chapters: Array<Chapter & { path: string }> = [];
+  const chapters: Array<Chapter & { path: string; subjectTitle: string | null }> = [];
   for (const f of chapterFiles) {
     const raw = await readFile(f.path);
     if (!raw) continue;
-    const parsed = load(raw.text) as Chapter;
-    if (parsed?.id) chapters.push({ ...parsed, path: f.path });
+    const parsed = load(raw.text) as Partial<Chapter>;
+    if (!parsed?.id) continue;
+
+    // 과목에 속하면 트랙을 과목에서 물려받는다. 파서와 같은 규칙이어야 한다.
+    const subject = parsed.subjectId ? subjectById.get(parsed.subjectId) : undefined;
+    const trackId = subject?.trackId ?? parsed.trackId;
+    if (!trackId) continue;
+
+    chapters.push({
+      id: parsed.id,
+      trackId,
+      subjectId: parsed.subjectId ?? null,
+      title: parsed.title ?? parsed.id,
+      summary: parsed.summary ?? "",
+      ord: parsed.ord ?? 0,
+      path: f.path,
+      subjectTitle: subject?.title ?? null,
+    });
   }
 
   const conceptFiles = files.filter(
@@ -80,7 +113,11 @@ export async function loadAdminTree(): Promise<AdminTree> {
         ...t,
         chapters: chapters
           .filter((c) => c.trackId === t.id)
-          .sort((a, b) => a.ord - b.ord)
+          // 과목이 여럿이면 ord 가 과목마다 1 부터 다시 시작하므로 과목으로 먼저 묶는다.
+          .sort(
+            (a, b) =>
+              (a.subjectId ?? "").localeCompare(b.subjectId ?? "") || a.ord - b.ord,
+          )
           .map((c) => ({
             ...c,
             concepts: concepts

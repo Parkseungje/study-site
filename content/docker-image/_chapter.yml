@@ -1,5 +1,5 @@
 id: docker-image
-trackId: infra
+subjectId: docker
 title: PART 3 · 이미지와 레이어
 summary: 이미지가 왜 층으로 되어 있는지 알고, 빌드 속도와 용량을 그 구조로 설명한다
 ord: 3

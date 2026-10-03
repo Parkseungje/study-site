@@ -16,10 +16,15 @@ export function fillTemplate(
 
 /** 지금 content/ 상태에서 뽑은 값들. 템플릿 변수의 기본값이 된다. */
 export function promptContext() {
-  const { concepts, chapters, tracks } = getContent();
+  const { concepts, chapters, tracks, subjects } = getContent();
   return {
     existingIds: concepts.map((c) => c.id).join(", ") || "(없음)",
-    chapterIds: chapters.map((c) => c.id).join(", ") || "(없음)",
+    // 어느 과목 아래인지 같이 보여준다. 장 id 만으로는 소속이 안 보인다.
+    chapterIds:
+      chapters
+        .map((c) => (c.subjectId ? `${c.id} (${c.subjectId})` : c.id))
+        .join(", ") || "(없음)",
+    subjectIds: subjects.map((s) => `${s.id} → ${s.trackId}`).join(", ") || "(없음)",
     trackIds: tracks.map((t) => t.id).join(", ") || "(없음)",
   };
 }
@@ -47,6 +52,7 @@ export function buildAuthoringKit(values: Record<string, string> = {}): string {
 ## 지금 상태
 
 - 트랙: ${ctx.trackIds}
+- 과목: ${ctx.subjectIds}
 - 장: ${ctx.chapterIds}
 - 이미 쓴 개념: ${ctx.existingIds}
 

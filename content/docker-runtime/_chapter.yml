@@ -1,5 +1,5 @@
 id: docker-runtime
-trackId: infra
+subjectId: docker
 title: PART 2 · 컨테이너 런타임의 실체
 summary: docker run 한 줄 뒤에서 무엇이 도는지 알고, Docker 는 컨테이너가 아니라는 것을 안다
 ord: 2
