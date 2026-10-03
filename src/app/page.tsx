@@ -1,27 +1,17 @@
 import Link from "next/link";
 import { getCurriculum } from "@/lib/queries";
 
-export const dynamic = "force-dynamic";
-
-export default async function Home() {
-  const tracks = await getCurriculum();
+export default function Home() {
+  const tracks = getCurriculum();
 
   return (
     <main className="mx-auto max-w-5xl px-6 py-12">
-      <div className="flex items-baseline gap-4">
-        <h1 className="text-2xl font-semibold">학습 커리큘럼</h1>
-        <Link
-          href="/notes"
-          className="text-sm text-blue-700 hover:underline dark:text-blue-400"
-        >
-          내 메모
-        </Link>
-      </div>
+      <h1 className="text-2xl font-semibold">학습 커리큘럼</h1>
 
       {tracks.length === 0 && (
         <p className="mt-8 text-sm text-neutral-500">
-          아직 비어 있습니다. <code className="font-mono">content/</code> 에 개념을 쓰고{" "}
-          <code className="font-mono">npm run import</code> 를 돌리세요.
+          아직 비어 있습니다. <code className="font-mono">content/</code> 에 개념을 쓰면
+          여기 나옵니다.
         </p>
       )}
 
@@ -47,14 +37,6 @@ export default async function Home() {
                       {concept.title}
                     </Link>
                     <span className="truncate text-neutral-500">{concept.summary}</span>
-                    {concept.note && (
-                      <span
-                        title="메모 있음"
-                        className="ml-auto shrink-0 text-xs text-neutral-400"
-                      >
-                        메모
-                      </span>
-                    )}
                   </li>
                 ))}
               </ol>

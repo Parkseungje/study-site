@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import type { VisualKind } from "@/generated/prisma";
+import type { VisualKind } from "@/lib/content";
 
 type Step = { name: string; detail?: string; code?: string };
 

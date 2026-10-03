@@ -6,13 +6,9 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "eslint",
-    "import": "tsx scripts/import.ts",
-    "postinstall": "prisma generate"
+    "lint": "eslint"
   },
   "dependencies": {
-    "@prisma/adapter-mariadb": "^7.10.0",
-    "@prisma/client": "^7.10.0",
     "gray-matter": "^4.0.3",
     "js-yaml": "^5.4.2",
     "next": "16.3.8",
@@ -30,7 +26,6 @@
     "@types/react-dom": "^19",
     "eslint": "^9",
     "eslint-config-next": "16.3.8",
-    "prisma": "^7.10.0",
     "tailwindcss": "^4",
     "tsx": "^4.23.15",
     "typescript": "^5"

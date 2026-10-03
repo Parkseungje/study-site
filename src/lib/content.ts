@@ -1,11 +1,12 @@
 // content/ 의 마크다운과 yml 을 읽어 구조로 바꾼다.
-// DB 를 건드리지 않는 순수 파싱이라 테스트하기 쉽고, import 가 이걸 쓴다.
+// 이 결과가 곧 사이트의 데이터다. DB 는 없다.
+import "server-only";
 import { readFileSync, readdirSync, existsSync, statSync } from "node:fs";
 import { join, basename } from "node:path";
 import matter from "gray-matter";
 import { load } from "js-yaml";
 // 화면이 쓰는 것과 같은 규칙이어야 목차 링크와 본문 제목 id 가 맞는다.
-import { toAnchor } from "../src/lib/anchor";
+import { toAnchor } from "@/lib/anchor";
 
 export { toAnchor };
 

@@ -2,16 +2,24 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
-import { getConcept, getLinkTargets, LEVEL_LABEL, LEVEL_ORDER } from "@/lib/queries";
+import {
+  getAllConceptIds,
+  getConcept,
+  getLinkTargets,
+  LEVEL_LABEL,
+  LEVEL_ORDER,
+} from "@/lib/queries";
 import { collectLinks, resolveLinks, splitBlocks, toAnchor } from "@/lib/markdown";
 import { Visual } from "@/components/Visual";
 import { CodeBlock, CodePair, type HighlightedCode } from "@/components/CodeBlock";
-import { NoteEditor } from "@/components/NoteEditor";
 import { highlight } from "@/lib/highlight";
 import type { CodeSpec } from "@/lib/markdown";
-import type { Level } from "@/generated/prisma";
+import type { Level } from "@/lib/content";
 
-export const dynamic = "force-dynamic";
+/** 개념 페이지를 전부 미리 구워둔다. 운영에서는 서버가 돌지 않는다. */
+export function generateStaticParams() {
+  return getAllConceptIds().map((id) => ({ id }));
+}
 
 type Props = {
   params: Promise<{ id: string }>;
@@ -22,7 +30,7 @@ export default async function ConceptPage({ params, searchParams }: Props) {
   const { id } = await params;
   const { level: levelParam } = await searchParams;
 
-  const concept = await getConcept(id);
+  const concept = getConcept(id);
   if (!concept) notFound();
 
   const available = LEVEL_ORDER.filter((l) => concept.levels.some((x) => x.level === l));
@@ -33,18 +41,18 @@ export default async function ConceptPage({ params, searchParams }: Props) {
   const sections = concept.sections.filter((s) => s.level === level);
   const visuals = new Map(concept.visuals.filter((v) => v.level === level).map((v) => [v.id, v]));
 
-  const prerequisites = concept.edgesOut.filter((e) => e.type === "prerequisite");
-  const deepens = concept.edgesOut.filter((e) => e.type === "deepens");
+  const prerequisites = concept.out.filter((e) => e.type === "prerequisite");
+  const deepens = concept.out.filter((e) => e.type === "deepens");
   // related 는 양방향이라 한쪽에만 적어도 양쪽 화면에 나온다.
   // 양쪽 파일에 다 적혀 있으면 같은 개념이 두 번 들어오므로 id 로 추린다.
   const related = [
-    ...concept.edgesOut.filter((e) => e.type === "related").map((e) => e.to),
-    ...concept.edgesIn.map((e) => e.from),
+    ...concept.out.filter((e) => e.type === "related").map((e) => e.to),
+    ...concept.relatedIn,
   ].filter(
     (c, i, all) => c.id !== concept.id && all.findIndex((x) => x.id === c.id) === i,
   );
 
-  const targets = await getLinkTargets(collectLinks(body?.body ?? ""));
+  const targets = getLinkTargets(collectLinks(body?.body ?? ""));
 
   // 서버에서 토큰화해 결과만 넘긴다. Shiki 는 클라이언트 번들에 안 들어간다.
   const withTokens = async (spec: CodeSpec): Promise<HighlightedCode> => ({
@@ -90,9 +98,9 @@ export default async function ConceptPage({ params, searchParams }: Props) {
             <p className="text-sm font-medium">먼저 알아야 하는 것</p>
             <ul className="mt-2 space-y-1 text-sm">
               {prerequisites.map((e) => (
-                <li key={e.toId}>
+                <li key={e.to.id}>
                   <Link
-                    href={`/c/${e.toId}`}
+                    href={`/c/${e.to.id}`}
                     className="text-blue-700 hover:underline dark:text-blue-400"
                   >
                     {e.to.title}
@@ -182,9 +190,9 @@ export default async function ConceptPage({ params, searchParams }: Props) {
             <h2 className="text-sm font-medium">더 들어가기</h2>
             <ul className="mt-2 space-y-1 text-sm">
               {deepens.map((e) => (
-                <li key={e.toId}>
+                <li key={e.to.id}>
                   <Link
-                    href={`/c/${e.toId}`}
+                    href={`/c/${e.to.id}`}
                     className="text-blue-700 hover:underline dark:text-blue-400"
                   >
                     {e.to.title}
@@ -201,7 +209,7 @@ export default async function ConceptPage({ params, searchParams }: Props) {
             <h2 className="text-sm font-medium">원문</h2>
             <ul className="mt-2 space-y-1 text-sm">
               {concept.sources.map((s) => (
-                <li key={s.id.toString()}>
+                <li key={s.url}>
                   <a
                     href={s.url}
                     target="_blank"
@@ -216,18 +224,6 @@ export default async function ConceptPage({ params, searchParams }: Props) {
           </section>
         )}
 
-        <NoteEditor
-          conceptId={concept.id}
-          initialBody={concept.note?.body ?? ""}
-          updatedAt={
-            concept.note
-              ? concept.note.updatedAt.toLocaleString("ko-KR", {
-                  dateStyle: "medium",
-                  timeStyle: "short",
-                })
-              : null
-          }
-        />
       </main>
 
       <aside className="hidden w-56 shrink-0 lg:block">
