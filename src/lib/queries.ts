@@ -1,10 +1,5 @@
 import { join } from "node:path";
-import {
-  parseContent,
-  type Concept,
-  type Level,
-  type ParsedContent,
-} from "@/lib/content";
+import { parseContent, type Concept, type ParsedContent } from "@/lib/content";
 
 export const CONTENT_ROOT = join(process.cwd(), "content");
 
@@ -131,10 +126,3 @@ export function getLinkTargets(ids: string[]) {
   return map;
 }
 
-export const LEVEL_LABEL: Record<Level, string> = {
-  intro: "입문",
-  standard: "중급",
-  deep: "심화",
-};
-
-export const LEVEL_ORDER: Level[] = ["intro", "standard", "deep"];

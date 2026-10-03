@@ -1,5 +1,0 @@
-id: docker
-trackId: infra
-title: Docker
-summary: 실행 환경을 통째로 묶어 어디서나 같게 띄우는 방법
-ord: 1

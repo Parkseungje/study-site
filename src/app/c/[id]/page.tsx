@@ -2,29 +2,19 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
-import {
-  getAllConceptIds,
-  getConcept,
-  getLinkTargets,
-  LEVEL_LABEL,
-  LEVEL_ORDER,
-} from "@/lib/queries";
+import { getAllConceptIds, getConcept, getLinkTargets } from "@/lib/queries";
 import { collectLinks, resolveLinks, splitBlocks, toAnchor } from "@/lib/markdown";
 import { Visual } from "@/components/Visual";
 import { CodeBlock, CodePair, type HighlightedCode } from "@/components/CodeBlock";
 import { highlight } from "@/lib/highlight";
 import type { CodeSpec } from "@/lib/markdown";
-import type { Level } from "@/lib/content";
 
 /** 개념 페이지를 전부 미리 구워둔다. 운영에서는 서버가 돌지 않는다. */
 export function generateStaticParams() {
   return getAllConceptIds().map((id) => ({ id }));
 }
 
-type Props = {
-  params: Promise<{ id: string }>;
-  searchParams: Promise<{ level?: string }>;
-};
+type Props = { params: Promise<{ id: string }> };
 
 export async function generateMetadata({ params }: Props) {
   const { id } = await params;
@@ -33,20 +23,13 @@ export async function generateMetadata({ params }: Props) {
   return { title: concept.title, description: concept.summary };
 }
 
-export default async function ConceptPage({ params, searchParams }: Props) {
+export default async function ConceptPage({ params }: Props) {
   const { id } = await params;
-  const { level: levelParam } = await searchParams;
 
   const concept = getConcept(id);
   if (!concept) notFound();
 
-  const available = LEVEL_ORDER.filter((l) => concept.levels.some((x) => x.level === l));
-  const level: Level =
-    available.find((l) => l === levelParam) ?? available[0] ?? "intro";
-
-  const body = concept.levels.find((l) => l.level === level);
-  const sections = concept.sections.filter((s) => s.level === level);
-  const visuals = new Map(concept.visuals.filter((v) => v.level === level).map((v) => [v.id, v]));
+  const visuals = new Map(concept.visuals.map((v) => [v.id, v]));
 
   const prerequisites = concept.out.filter((e) => e.type === "prerequisite");
   const deepens = concept.out.filter((e) => e.type === "deepens");
@@ -59,7 +42,7 @@ export default async function ConceptPage({ params, searchParams }: Props) {
     (c, i, all) => c.id !== concept.id && all.findIndex((x) => x.id === c.id) === i,
   );
 
-  const targets = getLinkTargets(collectLinks(body?.body ?? ""));
+  const targets = getLinkTargets(collectLinks(concept.body));
 
   // 서버에서 토큰화해 결과만 넘긴다. Shiki 는 클라이언트 번들에 안 들어간다.
   const withTokens = async (spec: CodeSpec): Promise<HighlightedCode> => ({
@@ -68,7 +51,7 @@ export default async function ConceptPage({ params, searchParams }: Props) {
   });
 
   const blocks = await Promise.all(
-    splitBlocks(body?.body ?? "").map(async (block) => {
+    splitBlocks(concept.body).map(async (block) => {
       if (block.kind === "code") {
         return { ...block, code: await withTokens(block.code) };
       }
@@ -96,9 +79,11 @@ export default async function ConceptPage({ params, searchParams }: Props) {
 
         <h1 className="mt-2 text-2xl font-semibold">{concept.title}</h1>
         <p className="mt-2 text-neutral-600 dark:text-neutral-400">{concept.summary}</p>
-        {concept.versionNote && (
-          <p className="mt-1 text-xs text-neutral-500">{concept.versionNote}</p>
-        )}
+        <p className="mt-1 text-xs text-neutral-500">
+          {concept.minutes > 0 && <span>{concept.minutes}분</span>}
+          {concept.minutes > 0 && concept.versionNote && <span className="mx-1.5">·</span>}
+          {concept.versionNote}
+        </p>
 
         {prerequisites.length > 0 && (
           <aside className="mt-6 rounded-lg border border-amber-300 bg-amber-50 p-4 dark:border-amber-900 dark:bg-amber-950/40">
@@ -120,40 +105,6 @@ export default async function ConceptPage({ params, searchParams }: Props) {
             </ul>
           </aside>
         )}
-
-        <div className="mt-6 flex gap-1 border-b border-neutral-200 dark:border-neutral-800">
-          {LEVEL_ORDER.map((l) => {
-            const enabled = available.includes(l);
-            const minutes = concept.levels.find((x) => x.level === l)?.minutes;
-            if (!enabled) {
-              return (
-                <span
-                  key={l}
-                  className="cursor-not-allowed px-3 py-2 text-sm text-neutral-300 dark:text-neutral-700"
-                  title="아직 쓰지 않은 단계"
-                >
-                  {LEVEL_LABEL[l]}
-                </span>
-              );
-            }
-            return (
-              <Link
-                key={l}
-                href={`/c/${concept.id}?level=${l}`}
-                className={
-                  l === level
-                    ? "-mb-px border-b-2 border-blue-600 px-3 py-2 text-sm font-medium"
-                    : "-mb-px border-b-2 border-transparent px-3 py-2 text-sm text-neutral-500 hover:text-neutral-800 dark:hover:text-neutral-200"
-                }
-              >
-                {LEVEL_LABEL[l]}
-                {minutes != null && (
-                  <span className="ml-1.5 text-xs text-neutral-400">{minutes}분</span>
-                )}
-              </Link>
-            );
-          })}
-        </div>
 
         <article className="prose-study mt-8">
           {blocks.map((block, i) => {
@@ -230,19 +181,17 @@ export default async function ConceptPage({ params, searchParams }: Props) {
             </ul>
           </section>
         )}
-
       </main>
 
       <aside className="hidden w-56 shrink-0 lg:block">
         <div className="sticky top-10">
-          {sections.length > 0 && (
+          {concept.sections.length > 0 && (
             <>
               <p className="text-xs font-medium uppercase tracking-wide text-neutral-400">
                 목차
               </p>
               <ol className="mt-3 space-y-2 text-sm">
-                {sections.map((s) => (
-                  // 제목이 같은 절이 둘이면 anchor 가 겹친다. ord 는 난이도 안에서 유일하다.
+                {concept.sections.map((s) => (
                   <li key={s.ord}>
                     <a
                       href={`#${s.anchor}`}

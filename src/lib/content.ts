@@ -10,9 +10,6 @@ import { toAnchor } from "@/lib/anchor";
 
 export { toAnchor };
 
-export const LEVELS = ["intro", "standard", "deep"] as const;
-export type Level = (typeof LEVELS)[number];
-
 export const VISUAL_KINDS = [
   "step",
   "sequence",
@@ -36,13 +33,11 @@ export type Chapter = {
 export type Section = { ord: number; heading: string; anchor: string };
 export type Visual = {
   id: string;
-  level: Level;
   title: string;
   kind: VisualKind;
   spec: unknown;
   ord: number;
 };
-export type LevelBody = { level: Level; body: string; minutes: number };
 export type Edge = { fromId: string; toId: string; type: EdgeType };
 export type SourceLink = { label: string; url: string };
 
@@ -53,8 +48,11 @@ export type Concept = {
   summary: string;
   versionNote: string | null;
   ord: number;
-  levels: LevelBody[];
-  sections: Array<Section & { level: Level }>;
+  /** 예상 읽기 시간(분) */
+  minutes: number;
+  /** 본문 전체. 난이도로 나누지 않는다. */
+  body: string;
+  sections: Section[];
   visuals: Visual[];
   edges: Edge[];
   sources: SourceLink[];
@@ -75,82 +73,48 @@ export type ParsedContent = {
   problems: Problem[];
 };
 
+/** 본문이 이보다 짧으면 얕다고 본다. */
+const THIN_BODY_BYTES = 6000;
+
 function readYaml<T>(path: string): T {
   return load(readFileSync(path, "utf8")) as T;
 }
 
-/**
- * 본문을 "# intro" 같은 H1 으로 자른다.
- * 코드 펜스 안의 # 는 제목이 아니므로 펜스 상태를 따라가며 센다.
- */
-function splitByLevel(body: string): Map<Level, string> {
-  const out = new Map<Level, string>();
-  let current: Level | null = null;
-  let buffer: string[] = [];
+/** 코드 펜스 안을 건너뛰며 줄을 훑는다. */
+function walkOutsideFences(
+  body: string,
+  visit: (line: string, index: number) => void,
+) {
   let fence: string | null = null;
+  const lines = body.split(/\r?\n/);
 
-  const flush = () => {
-    if (current) out.set(current, buffer.join("\n").trim());
-    buffer = [];
-  };
-
-  for (const line of body.split(/\r?\n/)) {
-    const fenceMatch = /^\s*(`{3,}|~{3,})/.exec(line);
-    if (fenceMatch) {
-      const marker = fenceMatch[1][0].repeat(3);
-      if (fence === null) fence = marker;
-      else if (fence === marker) fence = null;
-    }
-
-    if (fence === null) {
-      const h1 = /^#\s+(\S+)\s*$/.exec(line);
-      if (h1 && (LEVELS as readonly string[]).includes(h1[1])) {
-        flush();
-        current = h1[1] as Level;
-        continue;
-      }
-    }
-    if (current) buffer.push(line);
-  }
-  flush();
-  return out;
-}
-
-/** 난이도 본문에서 ## 절 제목을 뽑는다. 펜스 안은 건너뛴다. */
-function extractSections(body: string): Section[] {
-  const out: Section[] = [];
-  let fence: string | null = null;
-  let ord = 0;
-
-  for (const line of body.split(/\r?\n/)) {
-    const fenceMatch = /^\s*(`{3,}|~{3,})/.exec(line);
-    if (fenceMatch) {
-      const marker = fenceMatch[1][0].repeat(3);
+  for (let i = 0; i < lines.length; i++) {
+    const m = /^\s*(`{3,}|~{3,})/.exec(lines[i]);
+    if (m) {
+      const marker = m[1][0].repeat(3);
       if (fence === null) fence = marker;
       else if (fence === marker) fence = null;
       continue;
     }
-    if (fence !== null) continue;
-
-    const h2 = /^##\s+(.+?)\s*$/.exec(line);
-    if (h2) {
-      const heading = h2[1];
-      out.push({ ord: ord++, heading, anchor: toAnchor(heading) });
-    }
+    if (fence === null) visit(lines[i], i);
   }
+}
+
+/** 본문에서 ## 절 제목을 뽑는다. 이게 목차가 된다. */
+function extractSections(body: string): Section[] {
+  const out: Section[] = [];
+  walkOutsideFences(body, (line) => {
+    const h2 = /^##\s+(.+?)\s*$/.exec(line);
+    if (!h2) return;
+    out.push({ ord: out.length, heading: h2[1], anchor: toAnchor(h2[1]) });
+  });
   return out;
 }
 
 /** ```visual 펜스를 찾아 YAML 로 파싱한다. */
-function extractVisuals(
-  body: string,
-  level: Level,
-  where: string,
-  problems: Problem[],
-): Visual[] {
+function extractVisuals(body: string, where: string, problems: Problem[]): Visual[] {
   const out: Visual[] = [];
   const lines = body.split(/\r?\n/);
-  let ord = 0;
 
   for (let i = 0; i < lines.length; i++) {
     if (!/^\s*```visual\s*$/.test(lines[i])) continue;
@@ -161,7 +125,7 @@ function extractVisuals(
       problems.push({
         level: "error",
         where,
-        message: `visual 펜스가 닫히지 않았습니다 (${level}, ${i + 1}번째 줄)`,
+        message: `visual 펜스가 닫히지 않았습니다 (${i + 1}번째 줄)`,
       });
       break;
     }
@@ -176,7 +140,7 @@ function extractVisuals(
       problems.push({
         level: "error",
         where,
-        message: `visual YAML 파싱 실패 (${level}): ${(e as Error).message}`,
+        message: `visual YAML 파싱 실패: ${(e as Error).message}`,
       });
       continue;
     }
@@ -186,7 +150,7 @@ function extractVisuals(
     const title = typeof spec?.title === "string" ? spec.title : "";
 
     if (!id) {
-      problems.push({ level: "error", where, message: `visual 에 id 가 없습니다 (${level})` });
+      problems.push({ level: "error", where, message: "visual 에 id 가 없습니다" });
       continue;
     }
     if (!(VISUAL_KINDS as readonly string[]).includes(kind)) {
@@ -201,28 +165,17 @@ function extractVisuals(
       problems.push({ level: "warn", where, message: `visual "${id}" 에 title 이 없습니다` });
     }
 
-    out.push({ id, level, title: title || id, kind: kind as VisualKind, spec, ord: ord++ });
+    out.push({ id, title: title || id, kind: kind as VisualKind, spec, ord: out.length });
   }
   return out;
 }
 
-/** 본문의 [[id]] 를 모은다. 코드 펜스 안은 제외한다. */
+/** 본문의 [[id]] 를 모은다. */
 function extractLinks(body: string): string[] {
   const out = new Set<string>();
-  let fence: string | null = null;
-
-  for (const line of body.split(/\r?\n/)) {
-    const fenceMatch = /^\s*(`{3,}|~{3,})/.exec(line);
-    if (fenceMatch) {
-      const marker = fenceMatch[1][0].repeat(3);
-      if (fence === null) fence = marker;
-      else if (fence === marker) fence = null;
-      continue;
-    }
-    if (fence !== null) continue;
-
-    for (const m of line.matchAll(/\[\[([a-z0-9-]+)\]\]/gi)) out.add(m[1]);
-  }
+  walkOutsideFences(body, (line) => {
+    for (const hit of line.matchAll(/\[\[([a-z0-9-]+)\]\]/gi)) out.add(hit[1]);
+  });
   return [...out];
 }
 
@@ -252,84 +205,72 @@ export function parseConceptSource(
   const where = `${chapterId}/${id}.md`;
   const parsed = matter(source);
   const fm = parsed.data as Record<string, unknown>;
+  const body = parsed.content.trim();
 
   const title = typeof fm.title === "string" ? fm.title : "";
   const summary = typeof fm.summary === "string" ? fm.summary : "";
   const ord = typeof fm.ord === "number" ? fm.ord : NaN;
+  const minutes = typeof fm.minutes === "number" ? fm.minutes : NaN;
 
   if (!title) problems.push({ level: "error", where, message: "title 이 없습니다" });
   if (!summary) problems.push({ level: "error", where, message: "summary 가 없습니다" });
   if (Number.isNaN(ord)) problems.push({ level: "error", where, message: "ord 가 없습니다" });
+  if (Number.isNaN(minutes)) {
+    problems.push({ level: "error", where, message: "minutes 가 없습니다 (숫자 하나)" });
+  }
+  if (!body) {
+    problems.push({ level: "error", where, message: "본문이 비어 있습니다" });
+    return null;
+  }
 
   const versionNote = typeof fm.versionNote === "string" ? fm.versionNote : null;
   if (!versionNote) {
     problems.push({ level: "warn", where, message: "versionNote 가 비어 있습니다" });
   }
 
-  const minutes = (fm.minutes ?? {}) as Record<string, number>;
-  const bodies = splitByLevel(parsed.content);
+  const sections = extractSections(body);
+  const visuals = extractVisuals(body, where, problems);
 
-  if (bodies.size === 0) {
-    problems.push({
-      level: "error",
-      where,
-      message: "난이도 H1 (# intro / # standard / # deep) 이 하나도 없습니다",
-    });
-    return null;
-  }
-
-  const levels: LevelBody[] = [];
-  const sections: Array<Section & { level: Level }> = [];
-  const visuals: Visual[] = [];
-
-  for (const level of LEVELS) {
-    const body = bodies.get(level);
-    if (body === undefined) continue;
-    if (!body) {
-      problems.push({ level: "error", where, message: `${level} 본문이 비어 있습니다` });
-      continue;
-    }
-
-    const min = minutes[level];
-    if (typeof min !== "number") {
-      problems.push({ level: "error", where, message: `minutes.${level} 이 없습니다` });
-      continue;
-    }
-
-    levels.push({ level, body, minutes: min });
-    for (const s of extractSections(body)) sections.push({ ...s, level });
-    visuals.push(...extractVisuals(body, level, where, problems));
-  }
-
-  // 같은 난이도 안에 제목이 같은 절이 둘이면 앵커가 겹쳐 목차 링크가 엉뚱한 데로 간다.
-  for (const level of LEVELS) {
-    const seen = new Map<string, string>();
-    for (const s of sections.filter((x) => x.level === level)) {
-      const prev = seen.get(s.anchor);
-      if (prev !== undefined) {
-        problems.push({
-          level: "error",
-          where,
-          message: `${level} 에 제목이 같은 절이 둘입니다: "${prev}" (앵커 ${s.anchor})`,
-        });
-      }
-      seen.set(s.anchor, s.heading);
-    }
-  }
-
-  const standard = bodies.get("standard");
-  if (standard) {
-    const count = sections.filter((s) => s.level === "standard").length;
-    if (count < 3) {
+  // 제목이 같은 절이 둘이면 앵커가 겹쳐 목차 링크가 엉뚱한 데로 간다.
+  const seen = new Map<string, string>();
+  for (const s of sections) {
+    if (seen.has(s.anchor)) {
       problems.push({
-        level: "warn",
+        level: "error",
         where,
-        message: `standard 에 ## 절이 ${count}개뿐입니다 (3개 이상 권장)`,
+        message: `제목이 같은 절이 둘입니다: "${seen.get(s.anchor)}" (앵커 ${s.anchor})`,
       });
     }
-    if (!visuals.some((v) => v.level === "standard")) {
-      problems.push({ level: "warn", where, message: "standard 에 visual 이 없습니다" });
-    }
+    seen.set(s.anchor, s.heading);
+  }
+
+  if (sections.length < 4) {
+    problems.push({
+      level: "warn",
+      where,
+      message: `## 절이 ${sections.length}개뿐입니다. 책처럼 읽히려면 더 나눠야 합니다`,
+    });
+  }
+  if (Buffer.byteLength(body, "utf8") < THIN_BODY_BYTES) {
+    problems.push({
+      level: "warn",
+      where,
+      message: `본문이 ${Math.round(Buffer.byteLength(body, "utf8") / 1024)}KB 로 얕습니다 (${THIN_BODY_BYTES / 1024}KB 이상 권장)`,
+    });
+  }
+  if (visuals.length === 0) {
+    problems.push({ level: "warn", where, message: "visual 이 없습니다" });
+  }
+  // 이 커리큘럼의 척추는 "고통 → 해결" 이다. 그 흔적이 없으면 알려준다.
+  if (!/고통|불편|문제|그전엔|예전엔/.test(body)) {
+    problems.push({
+      level: "warn",
+      where,
+      message: "그전에 뭐가 불편했는지가 안 보입니다. 정의부터 시작하는 글일 수 있습니다",
+    });
+  }
+  if (!/자기 ?점검/.test(body)) {
+    problems.push({ level: "warn", where, message: "자기 점검 절이 없습니다" });
   }
 
   const edges: Edge[] = [];
@@ -358,8 +299,6 @@ export function parseConceptSource(
     sources.push({ label: raw.label, url: raw.url });
   }
 
-  const links = levels.flatMap((l) => extractLinks(l.body));
-
   return {
     id,
     chapterId,
@@ -367,12 +306,13 @@ export function parseConceptSource(
     summary,
     versionNote,
     ord,
-    levels,
+    minutes: Number.isNaN(minutes) ? 0 : minutes,
+    body,
     sections,
     visuals,
     edges,
     sources,
-    links: [...new Set(links)],
+    links: extractLinks(body),
     file: where,
   };
 }
@@ -484,9 +424,7 @@ export function parseContent(root: string): ParsedContent {
   }
 
   // 관계가 아직 없는 개념을 가리키면 그 관계만 빼고 진행한다.
-  // edge 테이블에 FK 가 걸려 있어 저장 자체가 불가능하고,
   // 아직 안 쓴 개념을 가리키는 것은 막을 일이 아니라 다음에 쓸 목록이다.
-  // 그 개념을 쓰고 다시 import 하면 관계가 저절로 살아난다.
   for (const c of concepts) {
     const alive: Edge[] = [];
     for (const e of c.edges) {
@@ -501,7 +439,7 @@ export function parseContent(root: string): ParsedContent {
       });
     }
     c.edges = alive;
-    // 본문 링크는 경고. 아직 안 쓴 개념일 수 있다.
+
     for (const link of c.links) {
       if (!conceptIds.has(link)) {
         problems.push({

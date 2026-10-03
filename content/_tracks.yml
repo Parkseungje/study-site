@@ -2,7 +2,3 @@
 - id: backend
   title: 백엔드
   ord: 1
-
-- id: infra
-  title: 인프라
-  ord: 2
