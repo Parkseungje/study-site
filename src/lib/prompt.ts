@@ -2,6 +2,7 @@ import "server-only";
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import { getContent, CONTENT_ROOT } from "@/lib/queries";
+import { curriculumSpine } from "@/lib/curriculum";
 
 /** 프롬프트 본문의 {{변수}} 를 채운다. 모르는 변수는 그대로 둔다. */
 export function fillTemplate(
@@ -32,6 +33,7 @@ export function buildAuthoringKit(values: Record<string, string> = {}): string {
   const spec = readFileSync(join(CONTENT_ROOT, "README.md"), "utf8");
   const { prompts } = getContent();
   const ctx = { ...promptContext(), ...values };
+  const spine = curriculumSpine();
 
   const templates = prompts
     .map((p) => `### ${p.name}  \`${p.id}\`\n\n${fillTemplate(p.body, ctx).trim()}`)
@@ -50,7 +52,23 @@ export function buildAuthoringKit(values: Record<string, string> = {}): string {
 
 새 개념의 \`[[링크]]\` 는 위 목록에 있는 id 만 쓴다.
 없는 개념을 가리켜도 되지만, 그러면 빨간 링크로 남는다.
+${
+  spine
+    ? `
+---
 
+# 커리큘럼 설계
+
+아래는 이 커리큘럼의 전체 지도와 "고통 → 해결" 척추다.
+새 개념을 쓸 때 **이 표에서 해당 줄을 찾아 그 서사를 따른다.**
+
+PART 별 상세는 여기 없다. \`/prompt/curriculum.md\` 로 전문을 내려받아
+쓰려는 PART 만 떼어 같이 붙여넣으면 더 정확해진다.
+
+${spine}
+`
+    : ""
+}
 ---
 
 ${spec}

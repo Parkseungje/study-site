@@ -7,8 +7,9 @@ const nextConfig: NextConfig = {
   outputFileTracingIncludes: {
     "/c/[id]": ["./content/**/*"],
     "/missing/[id]": ["./content/**/*"],
-    "/prompt": ["./content/**/*"],
-    "/prompt/kit.md": ["./content/**/*"],
+    "/prompt": ["./content/**/*", "./docs/master_curriculum.md"],
+    "/prompt/kit.md": ["./content/**/*", "./docs/master_curriculum.md"],
+    "/prompt/curriculum.md": ["./docs/master_curriculum.md"],
   },
 };
 
