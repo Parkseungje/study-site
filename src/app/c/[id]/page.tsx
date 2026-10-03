@@ -3,8 +3,9 @@ import { notFound } from "next/navigation";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import { getConcept, getLinkTargets, LEVEL_LABEL, LEVEL_ORDER } from "@/lib/queries";
-import { collectLinks, resolveLinks, splitVisuals, toAnchor } from "@/lib/markdown";
+import { collectLinks, resolveLinks, splitBlocks, toAnchor } from "@/lib/markdown";
 import { Visual } from "@/components/Visual";
+import { CodeBlock, CodePair } from "@/components/CodeBlock";
 import type { Level } from "@/generated/prisma";
 
 export const dynamic = "force-dynamic";
@@ -37,7 +38,7 @@ export default async function ConceptPage({ params, searchParams }: Props) {
   ];
 
   const targets = await getLinkTargets(collectLinks(body?.body ?? ""));
-  const blocks = splitVisuals(body?.body ?? "");
+  const blocks = splitBlocks(body?.body ?? "");
 
   return (
     <div className="mx-auto flex max-w-5xl gap-10 px-6 py-10">
@@ -112,27 +113,34 @@ export default async function ConceptPage({ params, searchParams }: Props) {
         </div>
 
         <article className="prose-study mt-8">
-          {blocks.map((block, i) =>
-            block.kind === "visual" ? (
-              visuals.has(block.id) ? (
-                <Visual key={block.id} data={visuals.get(block.id)!} />
-              ) : null
-            ) : (
-              <ReactMarkdown
-                key={i}
-                remarkPlugins={[remarkGfm]}
-                components={{
-                  h2: ({ children }) => (
-                    <h2 id={toAnchor(String(children))} className="scroll-mt-6">
-                      {children}
-                    </h2>
-                  ),
-                }}
-              >
-                {resolveLinks(block.text, targets)}
-              </ReactMarkdown>
-            ),
-          )}
+          {blocks.map((block, i) => {
+            switch (block.kind) {
+              case "visual": {
+                const visual = visuals.get(block.id);
+                return visual ? <Visual key={block.id} data={visual} /> : null;
+              }
+              case "code":
+                return <CodeBlock key={i} spec={block.code} />;
+              case "codePair":
+                return <CodePair key={i} bad={block.bad} good={block.good} />;
+              case "prose":
+                return (
+                  <ReactMarkdown
+                    key={i}
+                    remarkPlugins={[remarkGfm]}
+                    components={{
+                      h2: ({ children }) => (
+                        <h2 id={toAnchor(String(children))} className="scroll-mt-6">
+                          {children}
+                        </h2>
+                      ),
+                    }}
+                  >
+                    {resolveLinks(block.text, targets)}
+                  </ReactMarkdown>
+                );
+            }
+          })}
         </article>
 
         {deepens.length > 0 && (

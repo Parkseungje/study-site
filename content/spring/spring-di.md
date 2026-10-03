@@ -57,7 +57,7 @@ public class UserService {
 
 받는 통로는 세 가지다.
 
-```java file=Injection.java
+```java file=Injection.java highlight=2,5,8
 // 1. 생성자 주입
 public UserService(UserRepository repo) { this.repo = repo; }
 
@@ -106,6 +106,30 @@ steps:
 
 A 가 B 를, B 가 A 를 생성자로 요구하면 어느 쪽도 먼저 만들 수 없다.
 Spring Boot 2.6 부터는 이 경우 기동 자체가 실패한다.
+
+```java file=CircularReference.java fold
+// A 가 B 를 요구하고
+@Service
+public class OrderService {
+    private final PaymentService payment;
+    public OrderService(PaymentService payment) {
+        this.payment = payment;
+    }
+}
+
+// B 가 다시 A 를 요구한다
+@Service
+public class PaymentService {
+    private final OrderService order;
+    public PaymentService(OrderService order) {
+        this.order = order;
+    }
+}
+
+// 기동 시:
+// The dependencies of some of the beans in the application context
+// form a cycle
+```
 
 고치는 방법은 보통 셋 중 하나다. 한쪽을 세터 주입으로 바꾸거나, `@Lazy` 를 붙이거나,
 둘이 공유하는 로직을 제3의 클래스로 빼는 것이다. 앞의 둘은 증상만 가리므로
