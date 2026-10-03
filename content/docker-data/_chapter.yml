@@ -1,0 +1,5 @@
+id: docker-data
+subjectId: docker
+title: PART 5 · 데이터와 볼륨
+summary: 컨테이너가 사라져도 남아야 하는 데이터를 어디에 두는지 판단한다
+ord: 5
