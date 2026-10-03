@@ -123,7 +123,7 @@ function SequenceVisual({ actors, messages }: { actors: string[]; messages: Mess
       <div className="flex items-center gap-2 text-xs">
         <button
           type="button"
-          onClick={() => setShown(Math.max(0, shown - 1))}
+          onClick={() => setShown((n) => Math.max(0, n - 1))}
           disabled={shown === 0}
           className="rounded border border-neutral-300 px-2 py-1 enabled:hover:border-neutral-500 disabled:text-neutral-300 dark:border-neutral-700 dark:disabled:text-neutral-700"
         >
@@ -131,7 +131,7 @@ function SequenceVisual({ actors, messages }: { actors: string[]; messages: Mess
         </button>
         <button
           type="button"
-          onClick={() => setShown(Math.min(messages.length, shown + 1))}
+          onClick={() => setShown((n) => Math.min(messages.length, n + 1))}
           disabled={shown === messages.length}
           className="rounded border border-neutral-300 px-2 py-1 enabled:hover:border-neutral-500 disabled:text-neutral-300 dark:border-neutral-700 dark:disabled:text-neutral-700"
         >
@@ -307,7 +307,9 @@ function PlaygroundVisual({
                 <button
                   key={opt}
                   type="button"
-                  onClick={() => setPicked({ ...picked, [input.name]: opt })}
+                  onClick={() =>
+                    setPicked((prev) => ({ ...prev, [input.name]: opt }))
+                  }
                   aria-pressed={picked[input.name] === opt}
                   className={picked[input.name] === opt ? activeChip : idleChip}
                 >

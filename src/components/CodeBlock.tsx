@@ -120,7 +120,7 @@ function CodeCard({ spec }: { spec: HighlightedCode }) {
         {foldable && (
           <button
             type="button"
-            onClick={() => setOpen(!open)}
+            onClick={() => setOpen((o) => !o)}
             className="w-full border-t border-inherit bg-neutral-100 py-1.5 text-xs text-neutral-600 hover:bg-neutral-200 dark:bg-neutral-800 dark:text-neutral-400 dark:hover:bg-neutral-700"
           >
             {open ? "접기" : `${lines.length}줄 전체 보기`}
