@@ -1,0 +1,5 @@
+id: docker-compose
+subjectId: docker
+title: PART 8 · Compose 와 개발 워크플로
+summary: 여러 컨테이너를 재현 가능하게 묶고, 개발 환경을 어디까지 컨테이너에 넣을지 정한다
+ord: 8
