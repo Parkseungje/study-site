@@ -1,0 +1,27 @@
+# AI 에게 개념을 써달라고 할 때 쓰는 프롬프트.
+# 사이트의 템플릿 화면에서 {{변수}} 를 치환해 복사한다.
+
+- id: add-concept-ko
+  name: 개념 추가 · 기본
+  body: |
+    {{title}} 개념을 study-site 의 content 규격에 맞는 마크다운 파일 하나로 써줘.
+    설명 문장 없이 파일 내용만. 본문은 전부 한국어.
+
+    프런트매터:
+    - title, summary(한 문장), versionNote(기준 버전), ord, minutes
+    - edges: prerequisite / deepens / related 중 해당되는 것만
+    - sources: 공식 문서 위주
+
+    본문:
+    - "# intro" 전제 지식 0 기준, 5분, 절 나누지 않음
+    - "# standard" 20분, "##" 절 5개 이상
+    - "# deep" 40분, "##" 절로 나누고 내부 동작과 엣지 케이스
+    - 절 제목은 그대로 목차가 되니 내용을 드러내게 쓸 것
+    - 다른 개념은 [[conceptId]] 로 표기
+    - 코드는 펜스에 file= 붙이고, 비교가 될 때는 bad/good 쌍으로
+    - 그림이 설명보다 빠른 곳은 ```visual 펜스에 YAML 로 낼 것
+      kind 는 step | sequence | structure | playground
+      visual 의 id 는 {{conceptId}}- 로 시작할 것
+
+    이 개념이 들어갈 장: {{chapterId}}
+    기존 개념 id 목록: {{existingIds}}
