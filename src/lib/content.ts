@@ -231,9 +231,26 @@ function parseConcept(
   chapterId: string,
   problems: Problem[],
 ): Concept | null {
-  const id = basename(path, ".md");
+  return parseConceptSource(
+    basename(path, ".md"),
+    chapterId,
+    readFileSync(path, "utf8"),
+    problems,
+  );
+}
+
+/**
+ * 마크다운 한 벌을 검사한다. 파일이 아니라 문자열을 받으므로
+ * 어드민이 저장 전에 같은 규칙으로 미리 확인할 수 있다.
+ */
+export function parseConceptSource(
+  id: string,
+  chapterId: string,
+  source: string,
+  problems: Problem[],
+): Concept | null {
   const where = `${chapterId}/${id}.md`;
-  const parsed = matter(readFileSync(path, "utf8"));
+  const parsed = matter(source);
   const fm = parsed.data as Record<string, unknown>;
 
   const title = typeof fm.title === "string" ? fm.title : "";
