@@ -64,7 +64,7 @@ export default async function ConceptPage({ params, searchParams }: Props) {
   );
 
   return (
-    <div className="mx-auto flex max-w-5xl gap-10 px-6 py-10">
+    <div className="mx-auto flex max-w-[96rem] gap-10 px-6 py-10">
       <main className="min-w-0 flex-1">
         <nav className="text-sm text-neutral-500">
           <Link href="/" className="hover:underline">

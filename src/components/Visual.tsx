@@ -20,7 +20,7 @@ export function Visual({ data }: { data: VisualData }) {
   const spec = (data.spec ?? {}) as Record<string, unknown>;
 
   return (
-    <figure className="my-8 rounded-lg border border-neutral-200 dark:border-neutral-800">
+    <figure className="not-prose my-8 rounded-lg border border-neutral-200 dark:border-neutral-800">
       <figcaption className="border-b border-neutral-200 px-4 py-2.5 text-sm font-medium dark:border-neutral-800">
         {data.title}
       </figcaption>
@@ -69,7 +69,7 @@ function StepVisual({ steps }: { steps: Step[] }) {
       <div className="mt-4 min-h-16">
         {current.detail && <p className="text-sm">{current.detail}</p>}
         {current.code && (
-          <pre className="mt-3 overflow-x-auto rounded-md bg-neutral-100 p-3 text-xs dark:bg-neutral-900">
+          <pre className="visual-code mt-3">
             <code>{current.code}</code>
           </pre>
         )}

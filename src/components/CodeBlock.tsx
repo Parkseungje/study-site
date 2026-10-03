@@ -29,7 +29,9 @@ export function CodePair({
   good: HighlightedCode;
 }) {
   return (
-    <div className="my-5 grid gap-3 md:grid-cols-2">
+    // 좌우로 쪼개면 한 칸이 좁아져 코드가 가로 스크롤된다.
+    // 두 칸이 각자 쓸 만한 폭을 가질 때만 나란히 놓는다.
+    <div className="my-5 grid gap-3 xl:grid-cols-2">
       <CodeCard spec={bad} />
       <CodeCard spec={good} />
     </div>
@@ -61,7 +63,7 @@ function CodeCard({ spec }: { spec: HighlightedCode }) {
   const hasCaption = Boolean(spec.file || spec.label || spec.variant);
 
   return (
-    <figure className={`overflow-hidden rounded-lg border ${tone}`}>
+    <figure className={`not-prose overflow-hidden rounded-lg border ${tone}`}>
       {hasCaption && (
         <figcaption className="flex items-center gap-2 border-b border-inherit bg-neutral-50 px-3 py-1.5 text-xs dark:bg-neutral-900">
           {spec.variant && (
@@ -88,7 +90,8 @@ function CodeCard({ spec }: { spec: HighlightedCode }) {
       )}
 
       <div className="relative">
-        <pre className="shiki-code overflow-x-auto bg-neutral-50 py-2.5 text-xs leading-6 dark:bg-neutral-900">
+        {/* 배경·여백·글자 크기는 globals.css 의 .not-prose pre 가 정한다 */}
+        <pre className="shiki-code">
           <code className="block font-mono">
             {lines.slice(0, visibleCount).map((line, i) => {
               const tokens = spec.tokens?.[i];

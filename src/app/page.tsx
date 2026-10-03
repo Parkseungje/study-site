@@ -7,7 +7,7 @@ export default async function Home() {
   const tracks = await getCurriculum();
 
   return (
-    <main className="mx-auto max-w-3xl px-6 py-12">
+    <main className="mx-auto max-w-5xl px-6 py-12">
       <h1 className="text-2xl font-semibold">학습 커리큘럼</h1>
 
       {tracks.length === 0 && (

@@ -19,9 +19,9 @@ AOP 는 Aspect Oriented Programming, **관점 지향 프로그래밍**이다.
 
 ```java file=OrderService.java bad label="공통 처리가 섞임"
 public void placeOrder(Order order) {
-    long start = System.currentTimeMillis();
+    long start = System.nanoTime();
     repository.save(order);
-    log.info("걸린 시간 {}ms", System.currentTimeMillis() - start);
+    log.info("{}ns", System.nanoTime() - start);
 }
 ```
 

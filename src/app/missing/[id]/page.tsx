@@ -27,10 +27,10 @@ export default async function MissingConcept({
     .replaceAll("{{existingIds}}", existing.map((c) => c.id).join(", "));
 
   return (
-    <main className="mx-auto max-w-3xl px-6 py-12">
+    <main className="mx-auto max-w-5xl px-6 py-12">
       <p className="text-sm text-neutral-500">아직 쓰지 않은 개념</p>
       <h1 className="mt-1 font-mono text-2xl font-semibold">{id}</h1>
-      <p className="mt-3 text-neutral-600 dark:text-neutral-400">
+      <p className="mt-3 max-w-[72ch] text-neutral-600 dark:text-neutral-400">
         다른 개념의 본문이 이 개념을 가리키고 있습니다. 아래 프롬프트로 초안을 받아{" "}
         <code className="rounded bg-neutral-200/60 px-1 font-mono text-sm dark:bg-neutral-800">
           content/&lt;장&gt;/{id}.md

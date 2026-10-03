@@ -39,7 +39,8 @@ public class MySqlUserRepository implements UserRepository {
 
 ```java file=OrderService.java bad label="구체 클래스에 직접"
 public class OrderService {
-    private final MySqlUserRepository repo = new MySqlUserRepository();
+    private final MySqlUserRepository repo
+            = new MySqlUserRepository();
 }
 ```
 
