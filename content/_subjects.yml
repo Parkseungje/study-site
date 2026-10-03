@@ -1,6 +1,12 @@
 # 트랙 아래의 과목. 기술 하나에 해당한다.
 # 챕터(_chapter.yml)는 trackId 또는 subjectId 중 하나만 적는다.
 # subjectId 를 적으면 그 과목의 트랙에 자동으로 속한다.
+- id: java-backend
+  trackId: backend
+  title: Java 백엔드
+  summary: 자바 언어에서 시작해 Spring, DB, 분산 시스템, 운영까지 한 줄로
+  ord: 1
+
 - id: docker
   trackId: infra
   title: Docker
