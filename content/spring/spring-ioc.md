@@ -75,7 +75,7 @@ steps:
 
 컨테이너 인터페이스가 둘이다.
 
-| | BeanFactory | ApplicationContext |
+| 구분 | BeanFactory | ApplicationContext |
 | --- | --- | --- |
 | 역할 | 빈 조회의 최소 계약 | BeanFactory + 부가 기능 |
 | 생성 시점 | 요청할 때 (lazy) | 싱글톤은 기동 시 미리 |

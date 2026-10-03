@@ -157,6 +157,12 @@ export default async function ConceptPage({ params, searchParams }: Props) {
                           {children}
                         </h2>
                       ),
+                      // 넓은 표가 본문을 밀지 않도록 표만 따로 스크롤시킨다.
+                      table: ({ children }) => (
+                        <div className="table-scroll">
+                          <table>{children}</table>
+                        </div>
+                      ),
                     }}
                   >
                     {resolveLinks(block.text, targets)}

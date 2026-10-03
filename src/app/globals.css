@@ -89,6 +89,42 @@ body {
   font-weight: 600;
 }
 
+/* 표. 좁은 화면에서는 표만 가로로 스크롤되고 본문은 안 밀린다. */
+.prose-study .table-scroll {
+  margin-bottom: 1.25rem;
+  overflow-x: auto;
+}
+.prose-study table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.875rem;
+  line-height: 1.6;
+}
+.prose-study thead th {
+  border-bottom: 2px solid #d4d4d4;
+  background: #fafafa;
+  padding: 0.5rem 0.75rem;
+  text-align: left;
+  font-weight: 600;
+  white-space: nowrap;
+}
+.prose-study tbody td {
+  border-bottom: 1px solid #e5e5e5;
+  padding: 0.5rem 0.75rem;
+  vertical-align: top;
+}
+/* 첫 열은 항목 이름인 경우가 많아 붙여 읽히게 둔다. */
+.prose-study tbody td:first-child {
+  font-weight: 500;
+  white-space: nowrap;
+}
+.prose-study tbody tr:last-child td {
+  border-bottom: none;
+}
+.prose-study tbody tr:hover {
+  background: #fafafa;
+}
+
 /* Shiki 가 토큰마다 color 와 --shiki-dark 를 같이 넣어준다.
    다크일 때만 후자로 바꿔 쓴다. */
 @media (prefers-color-scheme: dark) {
@@ -105,6 +141,16 @@ body {
     color: #f87171;
   }
   .prose-study pre {
+    background: #171717;
+  }
+  .prose-study thead th {
+    border-bottom-color: #404040;
+    background: #171717;
+  }
+  .prose-study tbody td {
+    border-bottom-color: #262626;
+  }
+  .prose-study tbody tr:hover {
     background: #171717;
   }
 }
