@@ -83,13 +83,17 @@ async function main() {
             ord: v.ord,
           })),
         });
-        if (c.edges.length > 0) await tx.edge.createMany({ data: c.edges });
         if (c.sources.length > 0) {
           await tx.source.createMany({
             data: c.sources.map((s) => ({ conceptId: c.id, ...s })),
           });
         }
       }
+
+      // 관계는 개념을 전부 넣은 뒤에 건다.
+      // edge 는 양쪽 개념에 FK 가 걸려 있어, 아직 안 넣은 개념을 가리키면 거부당한다.
+      const edges = parsed.concepts.flatMap((c) => c.edges);
+      if (edges.length > 0) await tx.edge.createMany({ data: edges });
 
       for (const p of parsed.prompts) {
         const row = { name: p.name, body: p.body, updatedAt: new Date() };
