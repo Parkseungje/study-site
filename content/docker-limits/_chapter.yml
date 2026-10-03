@@ -1,0 +1,5 @@
+id: docker-limits
+subjectId: docker
+title: PART 13 · 단일 호스트의 한계
+summary: 컨테이너만으로 안 되는 지점을 알고, 왜 오케스트레이션이 필요한지 이해한다
+ord: 13
