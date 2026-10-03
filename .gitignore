@@ -45,3 +45,10 @@ next-env.d.ts
 
 # DB 백업 덤프
 /backup
+
+# Prisma 가 생성하는 클라이언트. postinstall 에서 다시 만든다.
+/src/generated
+
+# IDE
+.idea/
+.vscode/
