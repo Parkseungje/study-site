@@ -11,7 +11,13 @@ export async function getCurriculum() {
         include: {
           concepts: {
             orderBy: { ord: "asc" },
-            select: { id: true, title: true, summary: true },
+            select: {
+              id: true,
+              title: true,
+              summary: true,
+              // 메모를 남긴 개념을 목록에서 바로 알아보려고 존재 여부만 본다.
+              note: { select: { conceptId: true } },
+            },
           },
         },
       },

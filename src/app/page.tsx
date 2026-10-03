@@ -8,7 +8,15 @@ export default async function Home() {
 
   return (
     <main className="mx-auto max-w-5xl px-6 py-12">
-      <h1 className="text-2xl font-semibold">학습 커리큘럼</h1>
+      <div className="flex items-baseline gap-4">
+        <h1 className="text-2xl font-semibold">학습 커리큘럼</h1>
+        <Link
+          href="/notes"
+          className="text-sm text-blue-700 hover:underline dark:text-blue-400"
+        >
+          내 메모
+        </Link>
+      </div>
 
       {tracks.length === 0 && (
         <p className="mt-8 text-sm text-neutral-500">
@@ -39,6 +47,14 @@ export default async function Home() {
                       {concept.title}
                     </Link>
                     <span className="truncate text-neutral-500">{concept.summary}</span>
+                    {concept.note && (
+                      <span
+                        title="메모 있음"
+                        className="ml-auto shrink-0 text-xs text-neutral-400"
+                      >
+                        메모
+                      </span>
+                    )}
                   </li>
                 ))}
               </ol>

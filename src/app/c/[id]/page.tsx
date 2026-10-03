@@ -6,6 +6,7 @@ import { getConcept, getLinkTargets, LEVEL_LABEL, LEVEL_ORDER } from "@/lib/quer
 import { collectLinks, resolveLinks, splitBlocks, toAnchor } from "@/lib/markdown";
 import { Visual } from "@/components/Visual";
 import { CodeBlock, CodePair, type HighlightedCode } from "@/components/CodeBlock";
+import { NoteEditor } from "@/components/NoteEditor";
 import { highlight } from "@/lib/highlight";
 import type { CodeSpec } from "@/lib/markdown";
 import type { Level } from "@/generated/prisma";
@@ -210,6 +211,19 @@ export default async function ConceptPage({ params, searchParams }: Props) {
             </ul>
           </section>
         )}
+
+        <NoteEditor
+          conceptId={concept.id}
+          initialBody={concept.note?.body ?? ""}
+          updatedAt={
+            concept.note
+              ? concept.note.updatedAt.toLocaleString("ko-KR", {
+                  dateStyle: "medium",
+                  timeStyle: "short",
+                })
+              : null
+          }
+        />
       </main>
 
       <aside className="hidden w-56 shrink-0 lg:block">
