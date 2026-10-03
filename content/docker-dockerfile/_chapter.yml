@@ -1,0 +1,5 @@
+id: docker-dockerfile
+subjectId: docker
+title: PART 7 · Dockerfile 과 BuildKit
+summary: 명령 하나하나가 층과 실행에 어떤 영향을 주는지 알고, 지금의 빌더를 제대로 쓴다
+ord: 7
