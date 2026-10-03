@@ -283,6 +283,22 @@ function parseConcept(
     visuals.push(...extractVisuals(body, level, where, problems));
   }
 
+  // 같은 난이도 안에 제목이 같은 절이 둘이면 앵커가 겹쳐 목차 링크가 엉뚱한 데로 간다.
+  for (const level of LEVELS) {
+    const seen = new Map<string, string>();
+    for (const s of sections.filter((x) => x.level === level)) {
+      const prev = seen.get(s.anchor);
+      if (prev !== undefined) {
+        problems.push({
+          level: "error",
+          where,
+          message: `${level} 에 제목이 같은 절이 둘입니다: "${prev}" (앵커 ${s.anchor})`,
+        });
+      }
+      seen.set(s.anchor, s.heading);
+    }
+  }
+
   const standard = bodies.get("standard");
   if (standard) {
     const count = sections.filter((s) => s.level === "standard").length;

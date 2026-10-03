@@ -7,7 +7,6 @@ minutes: { intro: 5, standard: 20 }
 edges:
   - { to: java-interface, type: prerequisite }
   - { to: spring-ioc, type: deepens }
-  - { to: spring-bean-lifecycle, type: related }
 sources:
   - { label: Spring 공식 문서 - IoC Container, url: https://docs.spring.io/spring-framework/reference/core/beans.html }
 ---

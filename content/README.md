@@ -84,6 +84,10 @@ sources:
 | `minutes` | 필수 | 쓴 난이도만 적으면 된다 |
 | `versionNote` | 선택 | 비면 경고 |
 | `edges` | 선택 | `type` 은 prerequisite / deepens / related |
+
+`related` 는 양방향이라 **한쪽 파일에만 적으면 양쪽 화면에 나온다.**
+양쪽에 다 적어도 화면에서는 한 번만 보이지만, 중복이므로 한쪽만 둔다.
+`prerequisite` 와 `deepens` 는 단방향이라 가리키는 쪽에 적는다.
 | `sources` | 선택 | |
 
 난이도는 셋 중 하나 이상만 있으면 된다. 없는 난이도는 화면에서 탭이 비활성된다.
@@ -161,6 +165,7 @@ npm run import
 | 오류 | `prerequisite` 순환 |
 | 오류 | `visual` 블록의 `id` 중복 또는 `kind` 가 목록 밖 |
 | 오류 | 난이도 H1 이 하나도 없음 |
+| 오류 | 같은 난이도 안에 제목이 같은 `##` 절이 둘 |
 | 경고 | `[[id]]` 가 없는 개념을 가리킴 |
 | 경고 | `edges[].to` 가 아직 없는 개념 — 그 관계만 건너뛴다 |
 | 경고 | `standard` 에 `##` 절이 3개 미만 |

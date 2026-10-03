@@ -35,10 +35,14 @@ export default async function ConceptPage({ params, searchParams }: Props) {
 
   const prerequisites = concept.edgesOut.filter((e) => e.type === "prerequisite");
   const deepens = concept.edgesOut.filter((e) => e.type === "deepens");
+  // related 는 양방향이라 한쪽에만 적어도 양쪽 화면에 나온다.
+  // 양쪽 파일에 다 적혀 있으면 같은 개념이 두 번 들어오므로 id 로 추린다.
   const related = [
     ...concept.edgesOut.filter((e) => e.type === "related").map((e) => e.to),
     ...concept.edgesIn.map((e) => e.from),
-  ];
+  ].filter(
+    (c, i, all) => c.id !== concept.id && all.findIndex((x) => x.id === c.id) === i,
+  );
 
   const targets = await getLinkTargets(collectLinks(body?.body ?? ""));
 
@@ -235,7 +239,8 @@ export default async function ConceptPage({ params, searchParams }: Props) {
               </p>
               <ol className="mt-3 space-y-2 text-sm">
                 {sections.map((s) => (
-                  <li key={s.anchor}>
+                  // 제목이 같은 절이 둘이면 anchor 가 겹친다. ord 는 난이도 안에서 유일하다.
+                  <li key={s.ord}>
                     <a
                       href={`#${s.anchor}`}
                       className="text-neutral-600 hover:text-neutral-900 dark:text-neutral-400 dark:hover:text-neutral-100"
