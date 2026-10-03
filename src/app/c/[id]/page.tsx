@@ -26,6 +26,13 @@ type Props = {
   searchParams: Promise<{ level?: string }>;
 };
 
+export async function generateMetadata({ params }: Props) {
+  const { id } = await params;
+  const concept = getConcept(id);
+  if (!concept) return { title: "없는 개념" };
+  return { title: concept.title, description: concept.summary };
+}
+
 export default async function ConceptPage({ params, searchParams }: Props) {
   const { id } = await params;
   const { level: levelParam } = await searchParams;
