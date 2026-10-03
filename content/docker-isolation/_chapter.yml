@@ -1,0 +1,5 @@
+id: docker-isolation
+trackId: infra
+title: PART 4 · 컨테이너 실행과 격리
+summary: 격리가 커널의 어떤 기능으로 만들어지는지 알고, PID 1 함정을 피한다
+ord: 4
