@@ -5,7 +5,9 @@ import remarkGfm from "remark-gfm";
 import { getConcept, getLinkTargets, LEVEL_LABEL, LEVEL_ORDER } from "@/lib/queries";
 import { collectLinks, resolveLinks, splitBlocks, toAnchor } from "@/lib/markdown";
 import { Visual } from "@/components/Visual";
-import { CodeBlock, CodePair } from "@/components/CodeBlock";
+import { CodeBlock, CodePair, type HighlightedCode } from "@/components/CodeBlock";
+import { highlight } from "@/lib/highlight";
+import type { CodeSpec } from "@/lib/markdown";
 import type { Level } from "@/generated/prisma";
 
 export const dynamic = "force-dynamic";
@@ -38,7 +40,28 @@ export default async function ConceptPage({ params, searchParams }: Props) {
   ];
 
   const targets = await getLinkTargets(collectLinks(body?.body ?? ""));
-  const blocks = splitBlocks(body?.body ?? "");
+
+  // 서버에서 토큰화해 결과만 넘긴다. Shiki 는 클라이언트 번들에 안 들어간다.
+  const withTokens = async (spec: CodeSpec): Promise<HighlightedCode> => ({
+    ...spec,
+    tokens: await highlight(spec.code, spec.lang),
+  });
+
+  const blocks = await Promise.all(
+    splitBlocks(body?.body ?? "").map(async (block) => {
+      if (block.kind === "code") {
+        return { ...block, code: await withTokens(block.code) };
+      }
+      if (block.kind === "codePair") {
+        return {
+          ...block,
+          bad: await withTokens(block.bad),
+          good: await withTokens(block.good),
+        };
+      }
+      return block;
+    }),
+  );
 
   return (
     <div className="mx-auto flex max-w-5xl gap-10 px-6 py-10">

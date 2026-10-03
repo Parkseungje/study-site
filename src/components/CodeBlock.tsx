@@ -2,10 +2,17 @@
 
 import { useState } from "react";
 import type { CodeSpec } from "@/lib/markdown";
+import type { TokenLine } from "@/lib/highlight";
 
 const FOLD_THRESHOLD = 20;
+const COLLAPSED_LINES = 8;
+/** 빈 줄도 높이를 갖도록. 일반 공백은 trim 되어 줄이 찌그러진다. */
+const NBSP = " ";
 
-export function CodeBlock({ spec }: { spec: CodeSpec }) {
+/** 서버에서 토큰화한 결과. 지원 안 하는 언어면 null 이라 평문으로 떨어진다. */
+export type HighlightedCode = CodeSpec & { tokens: TokenLine[] | null };
+
+export function CodeBlock({ spec }: { spec: HighlightedCode }) {
   return (
     <div className="my-5">
       <CodeCard spec={spec} />
@@ -14,7 +21,13 @@ export function CodeBlock({ spec }: { spec: CodeSpec }) {
 }
 
 /** bad → good 을 좌우로 붙인다. 좁으면 위아래로 내려간다. */
-export function CodePair({ bad, good }: { bad: CodeSpec; good: CodeSpec }) {
+export function CodePair({
+  bad,
+  good,
+}: {
+  bad: HighlightedCode;
+  good: HighlightedCode;
+}) {
   return (
     <div className="my-5 grid gap-3 md:grid-cols-2">
       <CodeCard spec={bad} />
@@ -23,14 +36,14 @@ export function CodePair({ bad, good }: { bad: CodeSpec; good: CodeSpec }) {
   );
 }
 
-function CodeCard({ spec }: { spec: CodeSpec }) {
+function CodeCard({ spec }: { spec: HighlightedCode }) {
   const lines = spec.code.split("\n");
   const foldable = spec.fold || lines.length > FOLD_THRESHOLD;
   const [open, setOpen] = useState(!foldable);
   const [copied, setCopied] = useState(false);
 
   const highlighted = new Set(spec.highlight);
-  const shown = open ? lines : lines.slice(0, 8);
+  const visibleCount = open ? lines.length : COLLAPSED_LINES;
 
   const copy = async () => {
     await navigator.clipboard.writeText(spec.code);
@@ -45,9 +58,11 @@ function CodeCard({ spec }: { spec: CodeSpec }) {
         ? "border-emerald-300 dark:border-emerald-900"
         : "border-neutral-200 dark:border-neutral-800";
 
+  const hasCaption = Boolean(spec.file || spec.label || spec.variant);
+
   return (
     <figure className={`overflow-hidden rounded-lg border ${tone}`}>
-      {(spec.file || spec.label || spec.variant) && (
+      {hasCaption && (
         <figcaption className="flex items-center gap-2 border-b border-inherit bg-neutral-50 px-3 py-1.5 text-xs dark:bg-neutral-900">
           {spec.variant && (
             <span
@@ -61,9 +76,7 @@ function CodeCard({ spec }: { spec: CodeSpec }) {
             </span>
           )}
           {spec.label && <span className="font-medium">{spec.label}</span>}
-          {spec.file && (
-            <span className="font-mono text-neutral-500">{spec.file}</span>
-          )}
+          {spec.file && <span className="font-mono text-neutral-500">{spec.file}</span>}
           <button
             type="button"
             onClick={copy}
@@ -75,20 +88,29 @@ function CodeCard({ spec }: { spec: CodeSpec }) {
       )}
 
       <div className="relative">
-        <pre className="overflow-x-auto bg-neutral-50 py-2.5 text-xs leading-6 dark:bg-neutral-900">
+        <pre className="shiki-code overflow-x-auto bg-neutral-50 py-2.5 text-xs leading-6 dark:bg-neutral-900">
           <code className="block font-mono">
-            {shown.map((line, i) => (
-              <span
-                key={i}
-                className={
-                  highlighted.has(i + 1)
-                    ? "block bg-amber-100 px-3 dark:bg-amber-950/60"
-                    : "block px-3"
-                }
-              >
-                {line || " "}
-              </span>
-            ))}
+            {lines.slice(0, visibleCount).map((line, i) => {
+              const tokens = spec.tokens?.[i];
+              return (
+                <span
+                  key={i}
+                  className={
+                    highlighted.has(i + 1)
+                      ? "block bg-amber-100 px-3 dark:bg-amber-950/60"
+                      : "block px-3"
+                  }
+                >
+                  {tokens && tokens.length > 0
+                    ? tokens.map((token, j) => (
+                        <span key={j} style={token.style}>
+                          {token.content}
+                        </span>
+                      ))
+                    : line || NBSP}
+                </span>
+              );
+            })}
           </code>
         </pre>
 

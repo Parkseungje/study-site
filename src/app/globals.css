@@ -89,6 +89,14 @@ body {
   font-weight: 600;
 }
 
+/* Shiki 가 토큰마다 color 와 --shiki-dark 를 같이 넣어준다.
+   다크일 때만 후자로 바꿔 쓴다. */
+@media (prefers-color-scheme: dark) {
+  .shiki-code span {
+    color: var(--shiki-dark, inherit);
+  }
+}
+
 @media (prefers-color-scheme: dark) {
   .prose-study a {
     color: #60a5fa;
