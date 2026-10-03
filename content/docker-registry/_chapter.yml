@@ -1,0 +1,5 @@
+id: docker-registry
+subjectId: docker
+title: PART 10 · 레지스트리와 배포
+summary: 만든 이미지를 남에게 안전하게 전달한다
+ord: 10
