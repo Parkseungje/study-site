@@ -4,6 +4,9 @@ import { join, basename } from "node:path";
 
 const DOCS_ROOT = join(process.cwd(), "docs");
 
+// 문서 제목에도 "PART 1~21" 같은 말이 들어가므로, 머리말 바로 뒤가 PART 인 줄만 센다.
+const PART_HEADING = /^#\s+(?:\S+\s+)?PART\s+\d+/;
+
 export type Curriculum = {
   /** 파일명에서 뽑은 슬러그. 다운로드 주소에 쓰인다. */
   slug: string;
@@ -31,7 +34,7 @@ export function listCurricula(): Curriculum[] {
           .replace(/^#\s*/, "")
           .trim(),
         parts: lines
-          .filter((l) => /^# .*PART/.test(l))
+          .filter((l) => PART_HEADING.test(l))
           .map((l) => l.replace(/^#\s*(📚\s*)?/, "").trim()),
         bytes: Buffer.byteLength(text, "utf8"),
       };
@@ -59,7 +62,7 @@ export function curriculumSpines(): string | null {
     const lines = (readCurriculumBySlug(c.slug) ?? "").split(/\r?\n/);
     const start = lines.findIndex((l) => /^## .*전체 지도/.test(l));
     if (start === -1) continue;
-    const end = lines.findIndex((l, i) => i > start && /^# .*PART/.test(l));
+    const end = lines.findIndex((l, i) => i > start && PART_HEADING.test(l));
     chunks.push(
       `## ${c.title}\n\n${lines
         .slice(start, end === -1 ? undefined : end)
