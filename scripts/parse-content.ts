@@ -4,6 +4,10 @@ import { readFileSync, readdirSync, existsSync, statSync } from "node:fs";
 import { join, basename } from "node:path";
 import matter from "gray-matter";
 import { load } from "js-yaml";
+// 화면이 쓰는 것과 같은 규칙이어야 목차 링크와 본문 제목 id 가 맞는다.
+import { toAnchor } from "../src/lib/anchor";
+
+export { toAnchor };
 
 export const LEVELS = ["intro", "standard", "deep"] as const;
 export type Level = (typeof LEVELS)[number];
@@ -69,16 +73,6 @@ export type ParsedContent = {
   prompts: PromptTemplate[];
   problems: Problem[];
 };
-
-/** 한글 제목도 앵커로 쓸 수 있게, 공백만 하이픈으로 바꾸고 기호를 턴다. */
-export function toAnchor(heading: string): string {
-  return heading
-    .trim()
-    .toLowerCase()
-    .replace(/[`*_~[\]()#.,:;!?"'/\\]/g, "")
-    .replace(/\s+/g, "-")
-    .slice(0, 100);
-}
 
 function readYaml<T>(path: string): T {
   return load(readFileSync(path, "utf8")) as T;
