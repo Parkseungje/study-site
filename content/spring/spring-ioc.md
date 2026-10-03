@@ -3,7 +3,7 @@ title: IoC Container
 summary: 객체를 대신 만들고 서로 연결해 보관해두는 Spring 의 핵심 장치
 versionNote: Spring Boot 3.2 기준
 ord: 2
-minutes: { intro: 5, standard: 20 }
+minutes: { intro: 5, standard: 20, deep: 32 }
 edges:
   - { to: java-interface, type: prerequisite }
   - { to: spring-bean-lifecycle, type: deepens }
@@ -132,3 +132,136 @@ public class CounterService {
 - 파라미터 이름을 빈 이름과 맞춘다 (이름이 맞으면 Spring 이 그걸로 고른다)
 
 세 번째는 동작하긴 하지만 변수명을 바꾸는 순간 조용히 깨진다. 앞의 둘을 쓰는 게 낫다.
+
+# deep
+
+## BeanDefinition: 객체보다 먼저 있는 것
+
+컨테이너가 처음 만드는 것은 객체가 아니라 **설계도**다.
+`BeanDefinition` 하나가 "이 빈을 어떻게 만들어라"를 담는다.
+
+| 항목 | 내용 |
+| --- | --- |
+| `beanClassName` | 만들 클래스 |
+| `scope` | singleton / prototype / request ... |
+| `lazyInit` | 기동 때 만들지, 요청 때 만들지 |
+| `dependsOn` | 먼저 만들어야 하는 빈 |
+| `primary` | 같은 타입이 여럿일 때 기본값인지 |
+| `constructorArgumentValues` | 생성자에 넣을 값 |
+
+`@Component` 스캔, `@Bean` 메서드, XML 이 전부 **이 한 가지 형태로 수렴한다.**
+출처가 달라도 컨테이너 입장에서는 똑같은 정의일 뿐이다.
+
+## 후처리기가 둘인 이유
+
+이름이 비슷해서 헷갈리지만 **대상과 시점이 완전히 다르다.**
+
+| | BeanFactoryPostProcessor | BeanPostProcessor |
+| --- | --- | --- |
+| 대상 | 빈 **정의** | 빈 **인스턴스** |
+| 시점 | 객체 만들기 전 | 각 빈의 초기화 앞뒤 |
+| 횟수 | 전체에 한 번 | 빈마다 |
+| 예 | `@Value` 플레이스홀더 치환 | AOP 프록시 씌우기 |
+
+```
+정의 수집 → BeanFactoryPostProcessor (정의를 고친다)
+         → 인스턴스화 → BeanPostProcessor (객체를 감싼다) → 사용
+```
+
+`@Value("${db.url}")` 의 `${...}` 가 실제 값으로 바뀌는 것은 **객체가 생기기 전**이다.
+정의 단계에서 치환되므로 생성자 인자로 이미 완성된 값이 들어온다.
+
+세부 순서는 [[spring-bean-lifecycle]] 에서 본다.
+
+## 순환 참조를 푸는 3단계 캐시
+
+싱글톤을 만드는 동안 컨테이너는 캐시를 세 개 쓴다.
+
+| 캐시 | 담기는 것 |
+| --- | --- |
+| `singletonObjects` | 완성된 빈 |
+| `earlySingletonObjects` | 주입 전, 만들어지기만 한 빈 |
+| `singletonFactories` | 미완성 빈을 꺼내는 팩토리 |
+
+```visual
+id: spring-ioc-early-reference
+kind: step
+title: 미완성 객체를 미리 꺼내 쓰게 해서 순환을 끊는다
+steps:
+  - name: A 생성
+    detail: 생성자를 호출해 객체만 만든다. 필드는 아직 비어 있다
+  - name: A 를 팩토리에 등록
+    detail: singletonFactories 에 넣는다. 이 시점부터 남이 꺼내 갈 수 있다
+  - name: A 에 B 주입 시도
+    detail: B 가 아직 없으니 B 를 먼저 만든다
+  - name: B 가 A 를 요구
+    detail: 완성본은 없지만 팩토리에서 미완성 A 를 꺼내 B 에 넣는다
+  - name: B 완성
+    detail: B 가 완성되어 A 에 주입된다
+  - name: A 완성
+    detail: 둘 다 서로를 가리키게 됐다
+```
+
+왜 두 단계가 아니라 세 단계인가. 팩토리를 거치는 이유는 **AOP 때문**이다.
+A 가 프록시로 감싸져야 하는 빈이라면, 미완성 A 를 그냥 넘기면 B 는 원본을 쥐게 된다.
+팩토리가 "지금 꺼내면 프록시로 감싸서 준다"를 처리한다.
+
+생성자 주입은 1단계에서 이미 막힌다. 객체를 만들 수가 없으니 캐시에 올릴 것도 없다.
+
+## @Configuration 은 왜 프록시가 되는가
+
+`@Configuration` 클래스는 CGLIB 로 감싸진다. `@Bean` 메서드를 가로채기 위해서다.
+
+```java file=AppConfig.java highlight=8
+@Configuration
+public class AppConfig {
+    @Bean DataSource dataSource() { return new HikariDataSource(); }
+
+    @Bean
+    UserRepository userRepository() {
+        // 평범한 자바라면 여기서 DataSource 가 하나 더 만들어진다
+        return new UserRepository(dataSource());
+    }
+}
+```
+
+프록시가 `dataSource()` 호출을 가로채 **컨테이너에 이미 있는 빈을 돌려준다.**
+그래서 몇 번을 불러도 같은 인스턴스다. 이걸 full mode 라 한다.
+
+`@Component` 에 `@Bean` 을 쓰면 프록시가 없다(lite mode). 메서드 호출이 그냥 호출이라
+`new` 가 두 번 일어난다. **조용히 빈이 둘이 된다.** 설정 클래스에는 `@Configuration` 을 쓴다.
+
+`@Configuration(proxyBeanMethods = false)` 로 프록시를 끌 수 있다.
+메서드끼리 호출하지 않는 설정이라면 기동이 조금 빨라진다.
+
+## FactoryBean: 만드는 법이 복잡한 빈
+
+생성 과정이 까다로운 객체는 **만드는 방법 자체를 빈으로** 등록한다.
+
+```java file=MyFactoryBean.java
+@Component
+public class SqlSessionFactoryBean implements FactoryBean<SqlSessionFactory> {
+    @Override public SqlSessionFactory getObject() { /* 복잡한 조립 */ }
+    @Override public Class<?> getObjectType() { return SqlSessionFactory.class; }
+}
+```
+
+컨테이너는 이 빈을 주입할 때 **`getObject()` 의 결과**를 넘긴다.
+팩토리 자체가 필요하면 이름 앞에 `&` 를 붙인다 (`&sqlSessionFactoryBean`).
+
+MyBatis, JPA 연동 라이브러리가 이 방식을 쓴다. 직접 만들 일은 드물지만,
+`&` 가 붙은 빈 이름을 로그에서 봤을 때 뭔지 알게 된다.
+
+## 기동이 느릴 때 보는 곳
+
+싱글톤을 전부 미리 만들기 때문에, 빈이 많으면 기동이 느려진다.
+
+```properties file=application.properties
+spring.main.lazy-initialization=true
+```
+
+전부 지연 생성으로 바꾼다. 개발 중 재기동이 빨라진다.
+대신 **설정 오류를 첫 요청 때 만나게 된다.** 운영에는 켜지 않는다.
+
+특정 빈만 미루려면 `@Lazy` 를 클래스에 붙인다. 무거운 외부 연결처럼
+실제로 안 쓰일 수도 있는 것에만 선택적으로 쓰는 쪽이 안전하다.
