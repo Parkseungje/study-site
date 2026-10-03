@@ -1,14 +1,13 @@
 import Link from "next/link";
 import { getContent } from "@/lib/queries";
 import { fillTemplate, promptContext } from "@/lib/prompt";
-import { curriculumExists, curriculumParts } from "@/lib/curriculum";
+import { listCurricula } from "@/lib/curriculum";
 import { CopyBox } from "@/components/CopyBox";
 
 export default function PromptPage() {
   const { prompts, concepts, chapters, tracks } = getContent();
   const ctx = promptContext();
-  const hasCurriculum = curriculumExists();
-  const parts = curriculumParts();
+  const curricula = listCurricula();
 
   return (
     <main className="mx-auto max-w-5xl px-6 py-12">
@@ -39,37 +38,44 @@ export default function PromptPage() {
           </span>
         </div>
 
-        {hasCurriculum && (
-          <div className="flex flex-wrap items-center gap-3">
-            <a
-              href="/prompt/curriculum.md"
-              download
-              className="rounded-md border border-neutral-300 px-3 py-1.5 text-sm font-medium hover:border-neutral-500 dark:border-neutral-700"
-            >
-              커리큘럼 전문 내려받기 (.md)
-            </a>
-            <span className="text-xs text-neutral-500">
-              PART {parts.length}개 상세. 쓰려는 PART 만 떼어 키트와 함께 주면 더
-              정확해진다.
-            </span>
-          </div>
-        )}
       </div>
 
-      {hasCurriculum && (
-        <section className="mt-10">
-          <h2 className="text-lg font-semibold">커리큘럼 전체 지도</h2>
+      {curricula.length > 0 && (
+        <section className="mt-12">
+          <h2 className="text-lg font-semibold">커리큘럼</h2>
           <p className="mt-2 max-w-[72ch] text-sm text-neutral-500">
             글의 순서와 서사가 여기서 나온다. 새 개념은 해당 PART 의 &quot;고통 →
-            해결&quot; 줄을 찾아 그 서사를 따른다.
+            해결&quot; 줄을 찾아 그 서사를 따른다. 작성 키트에는 전체 지도와 척추만
+            실려 있으니, PART 별 상세가 필요하면 전문을 받아 그 PART 만 떼어 같이
+            준다.
           </p>
-          <ol className="mt-4 space-y-1 text-sm">
-            {parts.map((part) => (
-              <li key={part} className="text-neutral-600 dark:text-neutral-400">
-                {part}
-              </li>
+
+          <div className="mt-6 space-y-8">
+            {curricula.map((c) => (
+              <div key={c.slug}>
+                <div className="flex flex-wrap items-baseline gap-3">
+                  <h3 className="font-medium">{c.title}</h3>
+                  <span className="text-xs text-neutral-400">
+                    PART {c.parts.length}개 · {Math.round(c.bytes / 1024)}KB
+                  </span>
+                  <a
+                    href={`/prompt/curriculum/${c.slug}`}
+                    download
+                    className="text-sm text-blue-700 hover:underline dark:text-blue-400"
+                  >
+                    전문 내려받기
+                  </a>
+                </div>
+                <ol className="mt-3 space-y-1 text-sm">
+                  {c.parts.map((part) => (
+                    <li key={part} className="text-neutral-600 dark:text-neutral-400">
+                      {part}
+                    </li>
+                  ))}
+                </ol>
+              </div>
             ))}
-          </ol>
+          </div>
         </section>
       )}
 
