@@ -75,6 +75,8 @@ export type ParsedContent = {
 
 /** 본문이 이보다 짧으면 얕다고 본다. */
 const THIN_BODY_BYTES = 6000;
+/** 글 하나에 이만큼은 그림이 있어야 읽을 만하다. */
+const MIN_VISUALS = 3;
 
 function readYaml<T>(path: string): T {
   return load(readFileSync(path, "utf8")) as T;
@@ -258,8 +260,18 @@ export function parseConceptSource(
       message: `본문이 ${Math.round(Buffer.byteLength(body, "utf8") / 1024)}KB 로 얕습니다 (${THIN_BODY_BYTES / 1024}KB 이상 권장)`,
     });
   }
-  if (visuals.length === 0) {
-    problems.push({ level: "warn", where, message: "visual 이 없습니다" });
+  if (visuals.length < MIN_VISUALS) {
+    problems.push({
+      level: "warn",
+      where,
+      message: `visual 이 ${visuals.length}개뿐입니다 (${MIN_VISUALS}개 이상 권장). 긴 설명을 그림으로 바꿀 자리를 찾아보세요`,
+    });
+  } else if (new Set(visuals.map((v) => v.kind)).size === 1) {
+    problems.push({
+      level: "warn",
+      where,
+      message: `visual 이 전부 ${visuals[0].kind} 입니다. 종류를 섞으면 더 잘 읽힙니다`,
+    });
   }
   // 이 커리큘럼의 척추는 "고통 → 해결" 이다. 그 흔적이 없으면 알려준다.
   if (!/고통|불편|문제|그전엔|예전엔/.test(body)) {

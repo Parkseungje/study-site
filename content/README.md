@@ -104,7 +104,24 @@ sources:
 
 ## 시각 자료
 
-본문 안에 ` ```visual ` 펜스로 YAML 을 적으면 그 자리에 그림이 들어간다.
+본문 안에 ` ```visual ` 펜스로 YAML 을 적으면 그 자리에 **조작 가능한 그림**이 들어간다.
+코드를 쓰지 않는다. 데이터만 적으면 렌더러가 그린다.
+
+`id` 는 전체에서 유일해야 한다. 개념 id 를 접두어로 쓰면 안전하다.
+
+**한 글에 3개 이상** 두는 것을 목표로 한다. 긴 설명이 나올 때마다
+"이건 그림이 빠르지 않나"를 묻는다. 특히 이런 곳이다.
+
+| 이런 설명이 나오면 | 이 kind 로 |
+| --- | --- |
+| "A 하고 나서 B 하고 C 한다" | `step` |
+| "클라이언트가 보내면 서버가 응답하고" | `sequence` |
+| "안에 뭐가 들어 있고 그 안에 또" | `structure` |
+| "이 설정이면 이렇게, 저 설정이면 저렇게" | `playground` |
+
+### step — 순서가 있는 과정
+
+단계 버튼을 누르면 그 시점의 설명과 코드가 바뀐다.
 
 ````markdown
 ```visual
@@ -115,11 +132,77 @@ steps:
   - name: 내가 쓴 코드
     detail: 객체에 점을 찍어 메서드를 부른다
     code: account.withdraw(1000)
+  - name: 컴파일러가 보는 것
+    detail: 호출 대상이 숨겨진 첫 인자로 들어간다
+    code: Account.withdraw(account, 1000)
 ```
 ````
 
-`kind` 는 step / sequence / structure / playground / custom 다섯 가지.
-`id` 는 전체에서 유일해야 한다. 개념 id 를 접두어로 쓰면 안전하다.
+### sequence — 둘 이상이 주고받는 것
+
+이전/다음으로 메시지를 하나씩 진행한다. 아직 안 온 메시지는 흐리게 보인다.
+
+````markdown
+```visual
+id: tcp-handshake
+kind: sequence
+title: 연결은 세 번 주고받아야 성립한다
+actors: [클라이언트, 서버]
+messages:
+  - { from: 클라이언트, to: 서버, label: SYN, note: "seq=x" }
+  - { from: 서버, to: 클라이언트, label: SYN+ACK, note: "ack=x+1" }
+  - { from: 클라이언트, to: 서버, label: ACK }
+```
+````
+
+`actors` 순서가 화면의 열 순서다. `note` 는 선택이다.
+
+### structure — 계층·구조
+
+노드를 누르면 오른쪽에 설명이 뜬다. `children` 으로 중첩한다.
+
+````markdown
+```visual
+id: spring-ioc-hierarchy
+kind: structure
+title: 컨테이너는 두 겹이다
+nodes:
+  - name: BeanFactory
+    detail: 빈 조회의 최소 계약
+    children:
+      - name: ApplicationContext
+        detail: 이벤트 발행과 국제화가 더해진다
+        code: ctx.getBean(UserService.class)
+```
+````
+
+### playground — 값을 바꾸면 결과가 바뀐다
+
+**임의 코드를 실행하지 않는다.** 조건과 결과를 표로 선언한다.
+그래서 AI 도 쓸 수 있고 안전하다.
+
+````markdown
+```visual
+id: http-cache-control
+kind: playground
+title: 지시자와 캐시 상태에 따라 요청이 달라진다
+inputs:
+  - { name: directive, label: 지시자, options: [no-store, no-cache, "max-age=60"] }
+  - { name: fresh, label: 캐시 상태, options: [신선, 만료] }
+outcomes:
+  - { when: { directive: no-store }, result: "매 요청 서버로. 저장 안 함" }
+  - { when: { directive: no-cache }, result: "저장하되 매번 재검증" }
+  - { when: { directive: "max-age=60", fresh: 신선 }, result: "서버에 안 묻는다" }
+  - { when: { directive: "max-age=60", fresh: 만료 }, result: "재검증 요청을 보낸다" }
+```
+````
+
+`when` 의 조건이 **많이 맞는 것**이 뽑힌다. 위 예에서 `no-store` 는 캐시 상태와
+무관하게 항상 같은 결과다. 입력이 하나뿐이면 `when: "값"` 처럼 문자열로 줄여도 된다.
+
+### custom
+
+네 종류로 안 되는 것. 컴포넌트를 직접 써야 한다. **예외로만 쓴다.**
 
 ## 코드 블록 메타
 

@@ -99,6 +99,24 @@ struct Money { long amount; char currency[4]; };
 세 고통은 사실 **하나**다. **데이터와 코드 사이에 소속 관계가 없다.**
 사람 머릿속에만 있고 언어에는 없다.
 
+```visual
+id: procedural-to-oop-pain
+kind: structure
+title: 소속 관계가 없으면 무엇이 따라오는가
+nodes:
+  - name: 데이터와 코드에 소속 관계가 없다
+    detail: 구조체와 함수가 따로 있고, 둘을 묶는 것은 사람의 약속뿐이다. 아래 세 가지가 전부 여기서 나온다
+    children:
+      - name: 고통 1 · 누구나 바꾼다
+        detail: balance 를 건드리는 코드가 어디에 있는지 언어가 모른다. 버그가 나면 파일 전체가 용의자다
+        code: a->balance = 0;   // 아무 파일에서나 가능
+      - name: 고통 2 · 이름이 충돌한다
+        detail: 전역 이름 공간이 하나뿐이라 account_, inventory_ 같은 접두어로 피한다. 규칙일 뿐 강제가 아니다
+        code: void account_withdraw(struct Account *a, long amount);
+      - name: 고통 3 · 관련 코드를 못 찾는다
+        detail: 구조체를 고치면 어떤 함수가 깨지는지 컴파일해봐야 안다. 한눈에 보는 방법이 없다
+```
+
 ## 2. 이렇게 피해봤다 — C로 흉내내기
 
 C 프로그래머들이 이 고통을 몰랐던 게 아니다. 나름의 방법을 찾았고, 꽤 멀리까지 갔다.
@@ -178,6 +196,34 @@ void rect_init(struct Shape *s, double w, double h) {
 - `rect_init`을 빠뜨리면 함수 포인터가 널이고, 호출하는 순간 죽는다
 - 함수 하나를 추가하면 모든 `*_init`을 찾아 고쳐야 한다
 - `self`에 엉뚱한 객체를 넘겨도 컴파일러가 안 막는다
+
+세 시도가 각 고통을 어디까지 풀었는지 직접 바꿔보면 보인다.
+
+```visual
+id: procedural-to-oop-workarounds
+kind: playground
+title: 어떤 방법이 어떤 고통을 푸는가
+inputs:
+  - name: way
+    label: 방법
+    options: [네이밍 규칙, 불투명 포인터, 함수 포인터, 자바 클래스]
+  - name: pain
+    label: 고통
+    options: [누구나 바꾼다, 이름 충돌, 관련 코드 추적]
+outcomes:
+  - { when: { way: 네이밍 규칙, pain: 누구나 바꾼다 }, result: "못 푼다. 이름을 아무리 잘 지어도 a->balance = 0 은 된다" }
+  - { when: { way: 네이밍 규칙, pain: 이름 충돌 }, result: "푼다. 다만 규칙일 뿐이라 안 지켜도 컴파일된다" }
+  - { when: { way: 네이밍 규칙, pain: 관련 코드 추적 }, result: "반쯤. 접두어로 찾을 수는 있지만 언어가 보장하지 않는다" }
+  - { when: { way: 불투명 포인터, pain: 누구나 바꾼다 }, result: "푼다. 구조체 내용을 모르니 컴파일 에러가 난다", note: "대가: 필드마다 함수, 힙 강제, 수동 해제" }
+  - { when: { way: 불투명 포인터, pain: 이름 충돌 }, result: "못 푼다. 함수 이름은 여전히 전역이다" }
+  - { when: { way: 불투명 포인터, pain: 관련 코드 추적 }, result: "푼다. 그 .c 파일 안에만 있다" }
+  - { when: { way: 함수 포인터, pain: 누구나 바꾼다 }, result: "못 푼다. 필드는 그대로 열려 있다" }
+  - { when: { way: 함수 포인터, pain: 이름 충돌 }, result: "푼다. 구조체마다 다른 함수를 가리킬 수 있다" }
+  - { when: { way: 함수 포인터, pain: 관련 코드 추적 }, result: "푼다. 행동이 데이터 안에 적혀 있다", note: "대가: init 을 손으로 채워야 하고 빠뜨리면 널 포인터" }
+  - { when: { way: 자바 클래스, pain: 누구나 바꾼다 }, result: "푼다. private 한 단어로" }
+  - { when: { way: 자바 클래스, pain: 이름 충돌 }, result: "푼다. 이름이 클래스 안에 갇힌다" }
+  - { when: { way: 자바 클래스, pain: 관련 코드 추적 }, result: "푼다. 클래스 파일 하나가 경계다" }
+```
 
 > 세 시도의 공통점: **할 수는 있는데 사람이 규율로 지켜야 한다.**
 > 객체지향이 한 일은 새로운 발상을 내놓은 게 아니다.
