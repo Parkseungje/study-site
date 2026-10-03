@@ -1,0 +1,5 @@
+id: docker-intro
+trackId: infra
+title: PART 1 · 배포의 고통과 격리의 역사
+summary: 컨테이너가 왜 필요한가에 직접 답하고, VM 과의 차이를 커널 수준에서 구분한다
+ord: 1
