@@ -1,0 +1,197 @@
+// 개인 학습 커리큘럼 사이트 스키마
+//
+// 계층: track(책) -> chapter(장) -> concept(절) -> concept_section(소제목)
+// 본문 원본은 content/*.md 이고, 이 DB 는 조회용이다.
+// concept_section 과 concept_visual 은 import 스크립트가 재생성한다.
+//
+// DB 레벨 한글 COMMENT 는 Prisma 가 생성하지 못하므로
+// migration SQL 에 직접 넣는다. 스키마를 바꾸면 마이그레이션 SQL 의
+// COMMENT 도 같이 손봐야 한다.
+
+generator client {
+  provider = "prisma-client-js"
+  output   = "../src/generated/prisma"
+}
+
+// 접속 URL 은 prisma.config.ts 에 있다 (Prisma 7 규칙).
+datasource db {
+  provider = "mysql"
+}
+
+/// 난이도 단계. 같은 개념을 세 번 쓴다.
+enum Level {
+  intro
+  standard
+  deep
+}
+
+/// 개념 간 관계. 세 종류로 고정한다.
+enum EdgeType {
+  /// 이걸 모르면 이 개념을 못 읽는다. 상단 선행 블록에 뜬다.
+  prerequisite
+  /// 이 개념의 다음 단계. 하단 "더 들어가기"에 뜬다.
+  deepens
+  /// 같이 알면 좋은 것. 사이드바에 뜬다.
+  related
+}
+
+/// 시각 자료 종류. 렌더러가 이걸 보고 컴포넌트를 고른다.
+enum VisualKind {
+  /// 순서가 있는 과정
+  step
+  /// 둘 이상이 주고받는 것
+  sequence
+  /// 트리나 박스 구조
+  structure
+  /// 입력에 따라 결과가 바뀌는 것
+  playground
+  /// 네 종류로 안 되는 예외. 컴포넌트를 직접 쓴다.
+  custom
+}
+
+/// 최상위 분류. 책 한 권에 해당한다.
+model Track {
+  id       String    @id @db.VarChar(50)
+  title    String    @db.VarChar(100)
+  ord      Int       @db.SmallInt
+  chapters Chapter[]
+
+  @@map("track")
+}
+
+/// 개념을 묶는 장. 이게 없으면 개념 60개가 평평하게 나열된다.
+model Chapter {
+  id       String    @id @db.VarChar(64)
+  trackId  String    @map("track_id") @db.VarChar(50)
+  title    String    @db.VarChar(100)
+  summary  String    @db.VarChar(300)
+  ord      Int       @db.SmallInt
+  track    Track     @relation(fields: [trackId], references: [id], onDelete: Cascade)
+  concepts Concept[]
+
+  @@index([trackId])
+  @@map("chapter")
+}
+
+/// 학습 개념. [[id]] 로 참조되는 단위다.
+model Concept {
+  id          String   @id @db.VarChar(64)
+  chapterId   String   @map("chapter_id") @db.VarChar(64)
+  title       String   @db.VarChar(200)
+  /// 한 문장 요약. 링크 미리보기에 그대로 쓰인다.
+  summary     String   @db.VarChar(500)
+  /// 기준 버전. 1년 뒤 "이게 어느 버전이지"를 막는다.
+  versionNote String?  @map("version_note") @db.VarChar(100)
+  ord         Int      @db.SmallInt
+  updatedAt   DateTime @map("updated_at")
+
+  chapter  Chapter          @relation(fields: [chapterId], references: [id], onDelete: Cascade)
+  levels   ConceptLevel[]
+  sections ConceptSection[]
+  visuals  ConceptVisual[]
+  sources  Source[]
+  note     Note?
+  edgesOut Edge[]           @relation("EdgeFrom")
+  edgesIn  Edge[]           @relation("EdgeTo")
+
+  @@index([chapterId])
+  @@map("concept")
+}
+
+/// 개념별 3단계 본문.
+model ConceptLevel {
+  conceptId String @map("concept_id") @db.VarChar(64)
+  level     Level
+  /// 마크다운 본문. [[id]] 링크와 visual 펜스를 포함한다.
+  body      String @db.MediumText
+  /// 예상 읽기 시간(분)
+  minutes   Int    @db.SmallInt
+
+  concept Concept @relation(fields: [conceptId], references: [id], onDelete: Cascade)
+
+  @@id([conceptId, level])
+  @@map("concept_level")
+}
+
+/// 본문에서 추출한 목차. import 가 재생성한다.
+model ConceptSection {
+  conceptId String @map("concept_id") @db.VarChar(64)
+  level     Level
+  ord       Int    @db.SmallInt
+  /// 절 제목. 목차에 그대로 표시된다.
+  heading   String @db.VarChar(200)
+  /// URL 앵커. 절로 바로 이동할 때 쓰인다.
+  anchor    String @db.VarChar(100)
+
+  concept Concept @relation(fields: [conceptId], references: [id], onDelete: Cascade)
+
+  @@id([conceptId, level, ord])
+  @@map("concept_section")
+}
+
+/// 개념 간 관계.
+model Edge {
+  fromId String   @map("from_id") @db.VarChar(64)
+  toId   String   @map("to_id") @db.VarChar(64)
+  type   EdgeType
+
+  from Concept @relation("EdgeFrom", fields: [fromId], references: [id], onDelete: Cascade)
+  to   Concept @relation("EdgeTo", fields: [toId], references: [id], onDelete: Cascade)
+
+  @@id([fromId, toId, type])
+  @@index([toId])
+  @@map("edge")
+}
+
+/// 본문에 끼우는 조작 가능한 그림. import 가 재생성한다.
+model ConceptVisual {
+  id        String     @id @db.VarChar(64)
+  conceptId String     @map("concept_id") @db.VarChar(64)
+  /// 어느 난이도 본문에 들어가는지
+  level     Level
+  title     String     @db.VarChar(200)
+  kind      VisualKind
+  /// 마크다운 visual 블록의 YAML 을 파싱한 값
+  spec      Json
+  ord       Int        @db.SmallInt
+
+  concept Concept @relation(fields: [conceptId], references: [id], onDelete: Cascade)
+
+  @@index([conceptId])
+  @@map("concept_visual")
+}
+
+/// 개념 추가용 AI 프롬프트 템플릿.
+model PromptTemplate {
+  id        String   @id @db.VarChar(64)
+  name      String   @db.VarChar(100)
+  /// 프롬프트 본문. {{title}} 같은 변수를 포함한다.
+  body      String   @db.Text
+  updatedAt DateTime @map("updated_at")
+
+  @@map("prompt_template")
+}
+
+/// 개념별 개인 메모. 사이트에서 직접 쓰는 유일한 데이터다.
+model Note {
+  conceptId String   @id @map("concept_id") @db.VarChar(64)
+  body      String   @db.VarChar(500)
+  updatedAt DateTime @map("updated_at")
+
+  concept Concept @relation(fields: [conceptId], references: [id], onDelete: Cascade)
+
+  @@map("note")
+}
+
+/// 개념별 원문 링크.
+model Source {
+  id        BigInt @id @default(autoincrement())
+  conceptId String @map("concept_id") @db.VarChar(64)
+  label     String @db.VarChar(200)
+  url       String @db.VarChar(500)
+
+  concept Concept @relation(fields: [conceptId], references: [id], onDelete: Cascade)
+
+  @@index([conceptId])
+  @@map("source")
+}
