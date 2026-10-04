@@ -1,0 +1,5 @@
+id: jvm
+subjectId: java
+title: PART 2 · JVM 메모리 모델과 실행 원리
+summary: 이 변수가 어디 저장되는지 즉답하고, 메서드 호출 한 줄을 바이트코드까지 추적한다
+ord: 2
