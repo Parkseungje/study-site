@@ -1,12 +1,49 @@
-# 트랙 아래의 과목. 기술 하나에 해당한다.
+# 트랙 아래의 과목. 기술 하나 또는 한 덩어리의 주제에 해당한다.
 # 챕터(_chapter.yml)는 trackId 또는 subjectId 중 하나만 적는다.
 # subjectId 를 적으면 그 과목의 트랙에 자동으로 속한다.
-- id: java-backend
+#
+# 과목마다 docs/<id>_curriculum.md 가 짝으로 있다. /prompt 에서 내려받을 수 있다.
+
+# ── 백엔드 트랙 ──────────────────────────────
+# 순서가 곧 권장 학습 순서다. 데이터베이스를 데이터 접근보다 앞에 둔 것이
+# 원본 커리큘럼에서 고친 가장 중요한 지점이다.
+- id: java
   trackId: backend
-  title: Java 백엔드
-  summary: 자바 언어에서 시작해 Spring, DB, 분산 시스템, 운영까지 한 줄로
+  title: 자바
+  summary: 언어가 왜 이렇게 생겼는지부터 — 객체지향, JVM, GC, 컬렉션, 함수형, 동시성
   ord: 1
 
+- id: database
+  trackId: backend
+  title: 데이터베이스
+  summary: 모델링과 인덱스와 락을 알고 나서 ORM 을 배우기 위해 — 이론과 운영
+  ord: 2
+
+- id: spring
+  trackId: backend
+  title: 스프링
+  summary: HTTP 에서 시작해 IoC/DI, MVC 내부, 프록시와 AOP, Security 까지
+  ord: 3
+
+- id: data-access
+  trackId: backend
+  title: 데이터 접근
+  summary: 소켓으로 DB 를 직접 다루던 시절에서 JDBC, 트랜잭션 추상화, JPA 까지
+  ord: 4
+
+- id: test
+  trackId: backend
+  title: 테스트
+  summary: 통과 확인이 아니라 설계 도구로 — 테스트 더블, 슬라이스, Testcontainers
+  ord: 5
+
+- id: distributed-ops
+  trackId: backend
+  title: 분산과 운영
+  summary: 서버 한 대로 안 되는 지점부터 — 캐싱, 메시징, 관측, 장애 대응
+  ord: 6
+
+# ── 인프라 트랙 ──────────────────────────────
 - id: docker
   trackId: infra
   title: Docker
