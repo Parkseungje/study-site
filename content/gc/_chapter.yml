@@ -1,0 +1,5 @@
+id: gc
+subjectId: java
+title: PART 3 · GC
+summary: 아무도 free 를 안 부르는데 어떻게 회수되는지 알고, 왜 멈추며 어떻게 덜 멈추게 됐는지 설명한다
+ord: 3
